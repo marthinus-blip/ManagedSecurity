@@ -1,0 +1,56 @@
+name: AOT Compliance Build
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Setup Linux Build Environment (zlib Mystery)
+      run: |
+        mkdir -p local_lib
+        sudo ln -s /usr/lib/x86_64-linux-gnu/libz.so.1 local_lib/libz.so
+
+    - name: Publish NativeAOT (Linux)
+      run: |
+        LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/local_lib \
+        dotnet publish ManagedSecurity.Test/ManagedSecurity.Test.csproj \
+        -c Release -r linux-x64 --self-contained true /p:PublishAot=true
+
+    - name: Run AOT Compliance Tests (Linux)
+      run: ./ManagedSecurity.Test/bin/Release/net8.0/linux-x64/publish/ManagedSecurity.Test
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Publish NativeAOT (Windows)
+      run: |
+        dotnet publish ManagedSecurity.Test/ManagedSecurity.Test.csproj `
+        -c Release -r win-x64 --self-contained true /p:PublishAot=true
+
+    - name: Run AOT Compliance Tests (Windows)
+      run: .\ManagedSecurity.Test\bin\Release\net8.0\win-x64\publish\ManagedSecurity.Test.exe
+
+    - name: Upload Windows Binary for Wine Testing
+      uses: actions/upload-artifact@v4
+      with:
+        name: ManagedSecurity-Windows-AOT
+        path: ManagedSecurity.Test/bin/Release/net8.0/win-x64/publish/ManagedSecurity.Test.exe

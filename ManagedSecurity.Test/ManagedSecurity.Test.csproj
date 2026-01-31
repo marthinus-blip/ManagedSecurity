@@ -8,9 +8,26 @@
     <PublishAot>true</PublishAot>
     <EnableMSTestRunner>true</EnableMSTestRunner>
     
-    <!-- Fix for missing zlib dev package in build environment -->
-    <LinkerArgs>$(LinkerArgs) -L$(MSBuildProjectDirectory)/../local_lib</LinkerArgs>
+    <!-- Define custom symbols for compile-time switching -->
+    <DefineConstants Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(DefineConstants);LINUX</DefineConstants>
+    <DefineConstants Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(DefineConstants);WINDOWS</DefineConstants>
+
+    <!-- Fix for missing zlib dev package in build environment (Linux only) -->
+    <LinkerArgs Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(LinkerArgs) -L$(MSBuildProjectDirectory)/../local_lib</LinkerArgs>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="8.0.8" />
+  </ItemGroup>
+
+  <!-- Conditional platform-specific packages -->
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../ManagedSecurity.Common/ManagedSecurity.Common.csproj" />

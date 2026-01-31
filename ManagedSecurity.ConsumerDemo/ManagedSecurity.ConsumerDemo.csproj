@@ -5,6 +5,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    
+    <!-- Enable NativeAOT -->
+    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <!-- Cross-platform Linker Fix for Linux environment -->
+    <LinkerArgs Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(LinkerArgs) -L$(MSBuildProjectDirectory)/../local_lib</LinkerArgs>
   </PropertyGroup>
 
   <ItemGroup>

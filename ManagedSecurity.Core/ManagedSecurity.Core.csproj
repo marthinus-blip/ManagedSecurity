@@ -6,7 +6,27 @@
     <Nullable>enable</Nullable>
     <LangVersion>Latest</LangVersion>
     <AssemblyVersion>0.0.1.0</AssemblyVersion>
+    <!-- Activates AOT/Trimming analysis to ensure the library is compatible with NativeAOT -->
     <IsAotCompatible>true</IsAotCompatible>
+    
+    <!-- NuGet Package Metadata -->
+    <Version>0.0.1</Version>
+    <Authors>marthinus-blip</Authors>
+    <Company>ManagedSecurity</Company>
+    <Description>Core security logic for the ManagedSecurity library, optimized for NativeAOT.</Description>
+    <RepositoryUrl>https://github.com/marthinus-blip/ManagedSecurity</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    
+    <!-- Include the project README in the NuGet package -->
+    <PackageReadmeFile>PackageReadme.md</PackageReadmeFile>
+    
+    <!-- Automatically generate a .nupkg file in the output folder on every build -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Pack the shared README file into the root of the NuGet package -->
+    <None Include="../PackageReadme.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>

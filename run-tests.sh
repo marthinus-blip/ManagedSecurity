@@ -12,5 +12,5 @@ if [ ! -f "$TEST_BINARY" ]; then
 fi
 
 # Run the test
-echo "Running NativeAOT Test Binary..."
+echo "Running NativeAOT Tests via Microsoft.Testing.Platform..."
 $TEST_BINARY

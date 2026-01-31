@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="MSTest.Sdk/3.7.2">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <OutputType>Exe</OutputType>
     <PublishAot>true</PublishAot>
-    <IsAotCompatible>true</IsAotCompatible>
+    <EnableMSTestRunner>true</EnableMSTestRunner>
     
     <!-- Fix for missing zlib dev package in build environment -->
     <LinkerArgs>$(LinkerArgs) -L$(MSBuildProjectDirectory)/../local_lib</LinkerArgs>

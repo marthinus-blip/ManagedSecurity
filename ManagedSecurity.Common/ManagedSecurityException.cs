@@ -1,0 +1,11 @@
+﻿namespace ManagedSecurity.Common;
+
+[System.Serializable]
+public class ManagedSecurityException : System.Exception {
+    public ManagedSecurityException() { }
+    public ManagedSecurityException(string message) : base(message) { }
+    public ManagedSecurityException(string message, System.Exception inner) : base(message, inner) { }
+    protected ManagedSecurityException(
+        System.Runtime.Serialization.SerializationInfo info,
+        System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
+}

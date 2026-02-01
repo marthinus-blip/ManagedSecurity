@@ -22,11 +22,15 @@ jobs:
         mkdir -p local_lib
         sudo ln -s /usr/lib/x86_64-linux-gnu/libz.so.1 local_lib/libz.so
 
-    - name: Pack Libraries (Local Feed)
+    - name: Build and Pack Libraries (Local Feed)
       run: |
         mkdir -p local-packages
-        dotnet pack ManagedSecurity.Common/ManagedSecurity.Common.csproj -c Release -o ./local-packages
-        dotnet pack ManagedSecurity.Core/ManagedSecurity.Core.csproj -c Release -o ./local-packages
+        # Build first to ensure DLLs exist
+        dotnet build ManagedSecurity.Common/ManagedSecurity.Common.csproj -c Release
+        dotnet build ManagedSecurity.Core/ManagedSecurity.Core.csproj -c Release
+        # Pack using the existing builds
+        dotnet pack ManagedSecurity.Common/ManagedSecurity.Common.csproj -c Release --no-build -o ./local-packages
+        dotnet pack ManagedSecurity.Core/ManagedSecurity.Core.csproj -c Release --no-build -o ./local-packages
 
     - name: Publish NativeAOT (Linux)
       run: |
@@ -56,11 +60,16 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    - name: Pack Libraries (Local Feed)
+    - name: Build and Pack Libraries (Local Feed)
+      shell: pwsh
       run: |
         if (!(Test-Path local-packages)) { mkdir local-packages }
-        dotnet pack ManagedSecurity.Common/ManagedSecurity.Common.csproj -c Release -o ./local-packages
-        dotnet pack ManagedSecurity.Core/ManagedSecurity.Core.csproj -c Release -o ./local-packages
+        # Build first to ensure DLLs exist
+        dotnet build ManagedSecurity.Common/ManagedSecurity.Common.csproj -c Release
+        dotnet build ManagedSecurity.Core/ManagedSecurity.Core.csproj -c Release
+        # Pack using the existing builds
+        dotnet pack ManagedSecurity.Common/ManagedSecurity.Common.csproj -c Release --no-build -o ./local-packages
+        dotnet pack ManagedSecurity.Core/ManagedSecurity.Core.csproj -c Release --no-build -o ./local-packages
 
     - name: Publish NativeAOT (Windows)
       run: |

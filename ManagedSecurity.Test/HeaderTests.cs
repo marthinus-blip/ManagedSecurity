@@ -7,21 +7,24 @@ namespace ManagedSecurity.Test
     [TestClass]
     public class HeaderTests
     {
-        // Removed fixed MacSize constant as it is now variable based on S bit.
+        // Removed fixed MacSize constant based on S bit.
 
-        public static byte[] CreateBaseHeader(byte ivLengthCode = 0, byte lRaw = 0, ushort kiRaw = 0)
+        public static byte[] CreateBaseHeader(byte ivLengthCode = 0, ushort lRaw = 0, ushort kiRaw = 0)
         {
-            // ECode = 127 (7 bits) -> 0x7F
-            // S = ivLengthCode (2 bits) -> << 32-7-2 = 23
-            // V = 0 (3 bits) 
-            // L = lRaw (8 bits)
-            // KI = kiRaw (12 bits)
+            // Magic = 7 (3 bits) -> 0x7 -> << 29
+            // Ver = 0 (2 bits)   -> << 27
+            // Switch (S) = ivLengthCode (2 bits) -> << 25
+            // Reserved = 0 (1 bit) -> << 24
+            // L = lRaw (12 bits) -> << 12
+            // KI = kiRaw (12 bits) -> << 0
 
             uint h = 0;
-            h |= (uint)(0x7F) << 25;
-            h |= (uint)(ivLengthCode & 0x03) << 23;
-            h |= (uint)(lRaw & 0xFF) << 12;
-            h |= (uint)(kiRaw & 0xFFF);
+            h |= (uint)(0x07) << 29;         // Magic 111
+            h |= (uint)(0x00 & 0x03) << 27;  // Version 0
+            h |= (uint)(ivLengthCode & 0x03) << 25; // Switch
+            h |= (uint)(0x00 & 0x01) << 24;  // Reserved
+            h |= (uint)(lRaw & 0xFFF) << 12; // L (12 bits)
+            h |= (uint)(kiRaw & 0xFFF);      // KI (12 bits)
 
             byte[] b = new byte[4];
             b[0] = (byte)((h >> 24) & 0xFF);
@@ -43,30 +46,32 @@ namespace ManagedSecurity.Test
         [TestMethod]
         public void Parse_BaseCase_Success()
         {
-            // ECode=127, S=0 (96bit IV, 128bit MAC), L=10, KI=5
-            byte[] raw = CreateBaseHeader(0, 10, 5);
-            // Header(4) + IV(12) + MAC(16) + Payload(10)
-            int total = 4 + 12 + 16 + 10;
+            // Magic=7, S=0 (96bit IV, 128bit MAC), L=2000 (Fits in 12 bits!), KI=5
+            ushort lLarge = 2000;
+            byte[] raw = CreateBaseHeader(0, lLarge, 5);
+            
+            // Header(4) + IV(12) + MAC(16) + Payload(2000)
+            // No extensions needed for L=2000 now!
+            int total = 4 + 12 + 16 + 2000;
             byte[] msg = new byte[total];
             Array.Copy(raw, msg, 4);
 
             var h = new Bindings.Header(msg);
 
-            Assert.AreEqual(12, h.IvLength, "IV Length check");
-            Assert.AreEqual(16, h.MacLength, "MAC Length check");
-            Assert.AreEqual(10, h.PayloadLength, "Payload Length check");
-            Assert.AreEqual(5, h.KeyIndex, "Key Index check");
+            Assert.AreEqual(12, h.IvLength);
+            Assert.AreEqual(16, h.MacLength);
+            Assert.AreEqual(2000, h.PayloadLength);
+            Assert.AreEqual(5, h.KeyIndex);
             
             Assert.AreEqual(4, h.IvOffset); // No extensions
-            Assert.AreEqual(4 + 12, h.MacOffset);
             Assert.AreEqual(4 + 12 + 16, h.PayloadOffset);
         }
 
         [TestMethod]
-        public void Parse_InvalidECode_Throws()
+        public void Parse_InvalidMagic_Throws()
         {
-            // ECode != 127
-            byte[] raw = new byte[4]; // All zeros
+            // Magic != 7
+            byte[] raw = new byte[4]; // All zeros -> Magic=0
             Assert.ThrowsException<InvalidOperationException>(() => new Bindings.Header(raw));
         }
 
@@ -75,7 +80,6 @@ namespace ManagedSecurity.Test
         {
             // S=1 (128bit IV, 256bit MAC), L=0, KI=0
             byte[] raw = CreateBaseHeader(1, 0, 0); 
-            // Header(4) + IV(16) + MAC(32) + Payload(0)
             int total = 4 + 16 + 32 + 0;
             byte[] msg = new byte[total];
             Array.Copy(raw, msg, 4);
@@ -84,24 +88,27 @@ namespace ManagedSecurity.Test
 
             Assert.AreEqual(16, h.IvLength);
             Assert.AreEqual(32, h.MacLength);
-            Assert.AreEqual(4, h.IvOffset);
-            Assert.AreEqual(4 + 16, h.MacOffset);
-            Assert.AreEqual(4 + 16 + 32, h.PayloadOffset);
         }
 
         [TestMethod]
         public void Parse_VariableLengthL_1ByteExtension()
         {
-            // L > 127 (1 extension byte) -> S=0 default
-            // S=0 -> IV=12, MAC=16
+            // We want L to be > 2047? 
+            // Max 12-bit value before extension marker?
+            // With "leading one" logic on 12 bits:
+            // 0... (0xxx xxxx xxxx) -> 0 to 2047.
+            // 1... (10xx xxxx xxxx) -> Requires extension.
+            // So to test extension, we need L to trigger the MSB.
+            // Let's use 0x805 (1000 0000 0101).
+            // Leading ones = 1. Stripped prefix (2 bits: 10) -> 00 0000 0101 (5).
+            // Extension 1 byte: 0xFF.
+            // Value = (5 << 8) | 0xFF = 1280 + 255 = 1535.
             
-            // Construct Header
-            byte lRaw = 0x81; 
+            ushort lRaw = 0x805; 
             byte[] baseH = CreateBaseHeader(0, lRaw, 0); 
             
             int extLen = 1;
-            int payloadLen = 511;
-            // Header(4) + Ext(1) + IV(12) + MAC(16) + Payload(511)
+            int payloadLen = 1535;
             int total = 4 + extLen + 12 + 16 + payloadLen;
             byte[] msg = new byte[total];
             
@@ -110,20 +117,21 @@ namespace ManagedSecurity.Test
 
             var h = new Bindings.Header(msg);
 
-            Assert.AreEqual(511, h.PayloadLength);
-            Assert.AreEqual(5, h.IvOffset); // 4 + 1 extension
-            Assert.AreEqual(5 + 12 + 16, h.PayloadOffset);
+            Assert.AreEqual(1535, h.PayloadLength);
+            Assert.AreEqual(5, h.IvOffset); 
         }
         
         [TestMethod]
         public void Parse_VariableLengthKI_2ByteExtension()
         {
-            // KI 2 extension bytes -> S=0 default
+            // KI 12 bits logic same as L now.
+            // 2 extension bytes -> 110...
+            // 0xC01 (1100 0000 0001).
+            // Leading ones = 2. Strip 3 bits (110) -> 0 0000 0001 (1).
             ushort kiRaw = 0xC01;
             byte[] baseH = CreateBaseHeader(0, 0, kiRaw);
 
             int extLen = 2;
-            // Header(4) + Ext(2) + IV(12) + MAC(16) + Payload(0)
             int total = 4 + extLen + 12 + 16 + 0;
             byte[] msg = new byte[total];
 

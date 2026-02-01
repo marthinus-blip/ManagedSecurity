@@ -17,6 +17,14 @@ public class UnitTest1
         // Add Data Protection
         serviceCollection.AddDataProtection();
 
+        // New Header Format Tests
+        var headerTests = new HeaderTests();
+        headerTests.Parse_BaseCase_Success();
+        headerTests.Parse_InvalidMagic_Throws();
+        headerTests.Parse_MacLength_Switch();
+        headerTests.Parse_VariableLengthL_1ByteExtension();
+        headerTests.Parse_VariableLengthKI_2ByteExtension();
+
         var services = serviceCollection.BuildServiceProvider();
 
         // 2. Encrypt/Decrypt Check

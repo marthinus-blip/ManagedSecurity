@@ -19,10 +19,10 @@
 
       <FileVersion>$(VersionPrefix)</FileVersion>
       <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
-      <Version>$(VersionPrefix)-$(VersionSuffix)</Version>
-      <PackageVersion>$(VersionPrefix)-$(VersionSuffix)</PackageVersion>
+      <Version>$(VersionPrefix)$(VersionSuffix)</Version>
+      <PackageVersion>$(VersionPrefix)$(VersionSuffix)</PackageVersion>
     </PropertyGroup>
 
-    <Message Text="Built Version: $(VersionPrefix)-$(VersionSuffix)" Importance="high" />
+    <Message Text="Built Version: $(VersionPrefix)$(VersionSuffix)" Importance="high" />
   </Target>
 </Project>

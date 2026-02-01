@@ -144,5 +144,51 @@ namespace ManagedSecurity.Test
             Assert.AreEqual(65794, h.KeyIndex);
             Assert.AreEqual(6, h.IvOffset); 
         }
+
+        [TestMethod]
+        public void Write_RoundTrip_Success()
+        {
+            int payloadLen = 2000;
+            int keyIndex = 5;
+            bool highSec = false; // S=0
+
+            int required = Bindings.Header.GetRequiredSize(payloadLen, keyIndex, highSec);
+            byte[] buffer = new byte[required];
+
+            Bindings.Header.Write(buffer, payloadLen, keyIndex, highSec);
+
+            // Read back
+            var h = new Bindings.Header(buffer);
+            
+            Assert.AreEqual(payloadLen, h.PayloadLength);
+            Assert.AreEqual(keyIndex, h.KeyIndex);
+            Assert.AreEqual(12, h.IvLength); // S=0
+            Assert.AreEqual(16, h.MacLength);
+        }
+
+        [TestMethod]
+        public void Write_ExtendedLength_1Byte_Success()
+        {
+            // Value that needs 1 extension byte (>= 2048)
+            int payloadLen = 5000; 
+            int keyIndex = 0;
+            bool highSec = true; // S=1
+
+            int required = Bindings.Header.GetRequiredSize(payloadLen, keyIndex, highSec);
+            byte[] buffer = new byte[required];
+
+            Bindings.Header.Write(buffer, payloadLen, keyIndex, highSec);
+
+            // Read back
+            var h = new Bindings.Header(buffer);
+            Assert.AreEqual(payloadLen, h.PayloadLength);
+            Assert.AreEqual(16, h.IvLength); // S=1
+            Assert.AreEqual(32, h.MacLength); // S=1
+
+            // Verify size manually: 
+            // Header(4) + L_Ext(1) + KI_Ext(0) + IV(16) + MAC(32) + Payload(5000)
+            int expected = 4 + 1 + 0 + 16 + 32 + 5000;
+            Assert.AreEqual(expected, required);
     }
+}
 }

@@ -24,7 +24,12 @@ public class UnitTest1
         headerTests.Parse_MacLength_Switch();
         headerTests.Parse_VariableLengthL_1ByteExtension();
         headerTests.Parse_VariableLengthKI_2ByteExtension();
+            
+        // Writer Tests
+        headerTests.Write_RoundTrip_Success();
+        headerTests.Write_ExtendedLength_1Byte_Success();
 
+        Console.WriteLine("\nAll Tests Passed!");
         var services = serviceCollection.BuildServiceProvider();
 
         // 2. Encrypt/Decrypt Check

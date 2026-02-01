@@ -164,5 +164,141 @@ public partial class Bindings {
         public ReadOnlySpan<byte> Iv => _data.Span.Slice(IvOffset, IvLength);
         public ReadOnlySpan<byte> Mac => _data.Span.Slice(MacOffset, MacLength);
         public ReadOnlySpan<byte> Payload => _data.Span.Slice(PayloadOffset, PayloadLength);
+
+        // =========================================================================================
+        // WRITE / BUILDER API
+        // =========================================================================================
+
+        /// <summary>
+        /// Calculates the total size in bytes required for a message with the given parameters and empty extensions.
+        /// </summary>
+        public static int GetRequiredSize(int payloadLength, int keyIndex, bool highSecurityMode)
+        {
+            int baseSize = FixedHeaderSize;
+            
+            // Add extensions size for P
+            baseSize += GetExtensionCount(payloadLength);
+            // Add extensions size for KI
+            baseSize += GetExtensionCount(keyIndex);
+
+            int ivLen = highSecurityMode ? 16 : 12;
+            int macLen = highSecurityMode ? 32 : 16;
+            
+            // Format: Header+Ext + IV + MAC + Payload
+            return baseSize + ivLen + macLen + payloadLength;
+        }
+
+        public static void Write(Span<byte> destination, int payloadLength, int keyIndex, bool highSecurityMode)
+        {
+            if (destination.Length < GetRequiredSize(payloadLength, keyIndex, highSecurityMode))
+                throw new ArgumentException("Destination buffer too small.");
+
+            uint h = 0;
+            // Magic (111)
+            h |= (7u << 29);
+            // Version (0)
+            h |= (0u << 27);
+            // Switch
+            h |= ((highSecurityMode ? 1u : 0u) << 25);
+            // Reserved (0)
+            h |= (0u << 24);
+
+            int currentOffset = FixedHeaderSize;
+
+            // Encode L
+            ushort lBase = EncodeVariableLength12(payloadLength, destination, ref currentOffset);
+            h |= ((uint)lBase << 12);
+
+            // Encode KI
+            ushort kiBase = EncodeVariableLength12(keyIndex, destination, ref currentOffset);
+            h |= (uint)kiBase; // Bottom 12 bits
+
+            // Write 32-bit header (Big Endian)
+            destination[0] = (byte)((h >> 24) & 0xFF);
+            destination[1] = (byte)((h >> 16) & 0xFF);
+            destination[2] = (byte)((h >> 8) & 0xFF);
+            destination[3] = (byte)(h & 0xFF);
+        }
+
+        private static int GetExtensionCount(int value)
+        {
+            if (value < (1 << 11)) return 0; // 0... fits in 11 bits (top bit 0) -> < 2048
+            if (value < (1 << (10 + 8))) return 1; // 10... fits in 10 base + 8 ext -> 18 bits -> < 262144
+            if (value < (1 << (9 + 16))) return 2; // 110... fits in 9 base + 16 ext -> 25 bits -> ~33MB
+            // Add more tiers if needed
+            throw new ArgumentOutOfRangeException(nameof(value), "Value too large for current encoder implementation.");
+        }
+
+        private static ushort EncodeVariableLength12(int value, Span<byte> destination, ref int offset)
+        {
+            // Case 0: No extensions (0...)
+            // Must fit in 11 bits? Wait, 12 bits available. 
+            // If bit 11 (Top) is 0, we have 11 bits of capacity? No.
+            // Protocol: "0..." means Top bit is 0. So value must be < 2^11 (2048).
+            // Example: 2047 is 0111 1111 1111. Fits.
+            // Example: 2048 is 1000 0000 0000. Top bit is 1. Triggers extension logic.
+            if (value < (1 << 11))
+            {
+                return (ushort)value;
+            }
+
+            // Case 1: 1 Extension (10...)
+            // Capacity: 18 bits.
+            if (value < (1 << 18))
+            {
+                // We need to output 12 bits for base.
+                // Top 2 bits: 10
+                // Remaining 10 bits: Top 10 bits of value.
+                // Extension byte: Bottom 8 bits of value.
+                
+                // destination[offset] = bottom 8
+                destination[offset++] = (byte)(value & 0xFF);
+                
+                // Remainder = value >> 8.
+                // We need to fit this into the bottom 10 bits of the base.
+                int remainder = value >> 8;
+                
+                // Construct base: 10xxxxxx xxxxxxxx (12 bits)
+                // 10 = 0x2 -> shift to top 2 of 12 (bits 10,11).
+                // 1000 0000 0000 = 0x800.
+                // Mask for top 2 bits: 1100 0000 0000 -> 0xC00.
+                // Wait, prefix is "10". 
+                // binary: 10... 
+                // 0x800 (1000...)
+                // We want bits 11=1, 10=0.
+                // So 0x800.
+                
+                ushort baseVal = (ushort)(0x800 | (remainder & 0x3FF));
+                return baseVal;
+            }
+
+            // Case 2: 2 Extensions (110...)
+            // Capacity: 25 bits.
+            if (value < (1 << 25))
+            {
+                // Output bottom 16 bits to extensions (Big Endian usually preferred? Or Little?
+                // Readers use: value = (value << 8) | span[offset++]
+                // So we must write Most Significant Extension first?
+                // Let's re-read reader:
+                // Reader: value starts with Base.
+                // loop 0: value = (value << 8) | ext1
+                // loop 1: value = (value << 8) | ext2
+                // So we must write ext1 THEN ext2.
+                destination[offset++] = (byte)((value >> 8) & 0xFF); // Ext1
+                destination[offset++] = (byte)(value & 0xFF);       // Ext2
+
+                // Construct base: 110xxxxxxxxx
+                // 110... -> 0xC00 (1100...) ?
+                // 1000... = 8. 1100... = C. 
+                // We want bits 11=1, 10=1, 9=0.
+                // 1100 0000 0000 = 0xC00.
+                
+                int remainder = value >> 16;
+                ushort baseVal = (ushort)(0xC00 | (remainder & 0x1FF));
+                return baseVal;
+            }
+            
+            throw new ArgumentOutOfRangeException(nameof(value), "Value too large to encode.");
+        }
     }
 }

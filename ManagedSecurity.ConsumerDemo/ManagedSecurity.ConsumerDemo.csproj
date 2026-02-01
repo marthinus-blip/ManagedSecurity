@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\SharedFile.targets" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -15,8 +16,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ManagedSecurity.Common" Version="0.0.1" />
-    <PackageReference Include="ManagedSecurity.Core" Version="0.0.1" />
+    <PackageReference Include="ManagedSecurity.Common" Version="$(PackageVersion)" />
+    <PackageReference Include="ManagedSecurity.Core" Version="$(PackageVersion)" />
   </ItemGroup>
 
 </Project>

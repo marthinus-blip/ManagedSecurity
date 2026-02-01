@@ -1,16 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\SharedFile.targets" />
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>Latest</LangVersion>
-    <AssemblyVersion>0.0.1.0</AssemblyVersion>
     <!-- Activates AOT/Trimming analysis to ensure the library is compatible with NativeAOT -->
     <IsAotCompatible>true</IsAotCompatible>
     
     <!-- NuGet Package Metadata -->
-    <Version>0.0.1</Version>
     <Authors>marthinus-blip</Authors>
     <Company>ManagedSecurity</Company>
     <Description>Core security logic for the ManagedSecurity library, optimized for NativeAOT.</Description>

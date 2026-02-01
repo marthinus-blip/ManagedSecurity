@@ -17,5 +17,5 @@ Publish the project as a NativeAOT binary. This project uses the modern `MSTest.
 dotnet publish ManagedSecurity.Test/ManagedSecurity.Test.csproj -c Release -r linux-x64 --self-contained true /p:PublishAot=true
 
 # Run the AOT compliance tests
-./run-tests.sh
+./run-tests-all.sh
 ```

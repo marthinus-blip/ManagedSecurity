@@ -9,13 +9,13 @@
       <!-- 2. Clean 'v' and extract the numeric prefix (e.g., 1.2.3) -->
       <CleanTag>$(RawTag.TrimStart('v'))</CleanTag>
        <!-- Fallback if tag is empty -->
-      <CleanTag Condition="'$(CleanVersion)' == ''">0.0.1</CleanTag>
+      <CleanTag Condition="'$(CleanTag)' == ''">0.0.1</CleanTag>
       <VersionPrefix>$([System.Text.RegularExpressions.Regex]::Match($(CleanTag), '^[0-9]+\.[0-9]+\.[0-9]+'))</VersionPrefix>
       <GitTagSuffix>$([System.Text.RegularExpressions.Regex]::Match($(RawTag), '-(.*)$').Value.TrimStart("-"))</GitTagSuffix>
       
       <!-- 3. Define the Suffix -->
       <!-- If on CI (GitHub Actions), use the build number. Otherwise, use a local timestamp. -->
-      <VersionSuffix Condition="'$(GITHUB_RUN_NUMBER)' != ''">-$(GitTagSuffix)-ci.$(GITHUB_RUN_NUMBER)-$([System.DateTime]::Now.ToString("yyyyMMdd-HHmm"))</VersionSuffix>
+      <VersionSuffix Condition="'$(GITHUB_RUN_NUMBER)' != ''">-ci.$(GITHUB_RUN_NUMBER)-$(GitTagSuffix)-$([System.DateTime]::Now.ToString("yyyyMMdd-HHmm"))</VersionSuffix>
       <VersionSuffix Condition="'$(VersionSuffix)' == '' AND '$(Configuration)' == 'Debug'">-dev-$(GitTagSuffix)-$([System.DateTime]::Now.ToString("yyyyMMdd-HHmm"))</VersionSuffix>
 
       <FileVersion>$(VersionPrefix)</FileVersion>

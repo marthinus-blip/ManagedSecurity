@@ -29,6 +29,11 @@ public class UnitTest1
         headerTests.Write_RoundTrip_Success();
         headerTests.Write_ExtendedLength_1Byte_Success();
 
+        // Core Cipher Tests
+        var cipherTests = new CipherTests();
+        cipherTests.Encrypt_Decrypt_RoundTrip_Success();
+        cipherTests.Decrypt_TamperedHeader_Throws();
+
         Console.WriteLine("\nAll Tests Passed!");
         var services = serviceCollection.BuildServiceProvider();
 

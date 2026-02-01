@@ -29,4 +29,8 @@
     <None Include="../PackageReadme.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ManagedSecurity.Common\ManagedSecurity.Common.csproj" />
+  </ItemGroup>
+
 </Project>

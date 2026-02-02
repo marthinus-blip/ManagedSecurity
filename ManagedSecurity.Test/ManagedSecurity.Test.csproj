@@ -13,8 +13,8 @@
     <DefineConstants Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(DefineConstants);LINUX</DefineConstants>
     <DefineConstants Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(DefineConstants);WINDOWS</DefineConstants>
 
-    <!-- Fix for missing zlib dev package in build environment (Linux only) -->
-    <LinkerArgs Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(LinkerArgs) -L$(MSBuildProjectDirectory)/../local_lib</LinkerArgs>
+    <!-- Static linking for zlib to ensure portability (Linux only) -->
+    <LinkerArgs Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(LinkerArgs) -Wl,-Bstatic -lz -Wl,-Bdynamic</LinkerArgs>
   </PropertyGroup>
 
   <ItemGroup>

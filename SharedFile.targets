@@ -32,4 +32,21 @@
     <Message Text="Version: $(Version)" Importance="high" />
     <Message Text="Built Version: $(Version)" Importance="high" />
   </Target>
+
+  <!-- Friendly Diagnostic for NativeAOT Static Linking -->
+  <Target Name="CheckZLib" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::IsOSPlatform('Linux')) AND '$(PublishAot)' == 'true'">
+    <PropertyGroup>
+      <ZLibPath_Ubuntu>/usr/lib/x86_64-linux-gnu/libz.a</ZLibPath_Ubuntu>
+      <ZLibPath_Fedora>/usr/lib64/libz.a</ZLibPath_Fedora>
+      <ZLibPath_Generic>/usr/lib/libz.a</ZLibPath_Generic>
+    </PropertyGroup>
+
+    <Warning Condition="!Exists($(ZLibPath_Ubuntu)) AND !Exists($(ZLibPath_Fedora)) AND !Exists($(ZLibPath_Generic))"
+             Code="MS001"
+             Text="Static library 'libz.a' not found. NativeAOT publication may fail. 
+             Install it using:
+             - Ubuntu/Debian: sudo apt-get install zlib1g-dev
+             - Fedora/CentOS: sudo dnf install zlib-static
+             - Alpine: apk add zlib-dev zlib-static" />
+  </Target>
 </Project>

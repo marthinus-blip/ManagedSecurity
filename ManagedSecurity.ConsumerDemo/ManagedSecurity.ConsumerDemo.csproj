@@ -11,8 +11,8 @@
     <PublishAot>true</PublishAot>
     <IsAotCompatible>true</IsAotCompatible>
 
-    <!-- Cross-platform Linker Fix for Linux environment -->
-    <LinkerArgs Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(LinkerArgs) -L$(MSBuildProjectDirectory)/../local_lib</LinkerArgs>
+    <!-- Static linking for zlib to ensure portability (Linux only) -->
+    <LinkerArgs Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(LinkerArgs) -Wl,-Bstatic -lz -Wl,-Bdynamic</LinkerArgs>
   </PropertyGroup>
 
   <ItemGroup>

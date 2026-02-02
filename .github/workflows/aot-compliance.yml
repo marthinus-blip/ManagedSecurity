@@ -17,10 +17,8 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    - name: Setup Linux Build Environment (zlib Mystery)
-      run: |
-        mkdir -p local_lib
-        sudo ln -s /usr/lib/x86_64-linux-gnu/libz.so.1 local_lib/libz.so
+    - name: Install dependencies (zlib static)
+      run: sudo apt-get update && sudo apt-get install -y zlib1g-dev
 
     - name: Build and Pack Libraries (Local Feed)
       run: |
@@ -34,7 +32,6 @@ jobs:
 
     - name: Publish NativeAOT (Linux)
       run: |
-        LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/local_lib \
         dotnet publish ManagedSecurity.Test/ManagedSecurity.Test.csproj \
         -c Release -r linux-x64 --self-contained true /p:PublishAot=true
 
@@ -43,7 +40,6 @@ jobs:
 
     - name: Publish Consumer Demo (Linux)
       run: |
-        LIBRARY_PATH=$LIBRARY_PATH:$(pwd)/local_lib \
         dotnet publish ManagedSecurity.ConsumerDemo/ManagedSecurity.ConsumerDemo.csproj \
         -c Release -r linux-x64 --self-contained true /p:PublishAot=true
 

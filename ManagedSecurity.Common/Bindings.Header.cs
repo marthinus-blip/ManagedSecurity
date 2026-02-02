@@ -88,10 +88,16 @@ public partial class Bindings {
             IvOffset = currentOffset;
             MacOffset = IvOffset + IvLength;
             PayloadOffset = MacOffset + MacLength;
-            TotalLength = PayloadOffset + PayloadLength;
+            
+            // Use long to prevent overflow during length check
+            long total = (long)PayloadOffset + PayloadLength;
+            if (total > int.MaxValue)
+                throw new ArgumentException("Total message length exceeds supported limits.");
+            
+            TotalLength = (int)total;
 
             if (data.Length < TotalLength)
-               throw new ArgumentException($"Data length {data.Length} is less than required {TotalLength}");
+                throw new ArgumentException($"Data length {data.Length} is less than required {TotalLength}");
         }
 
         // Variable Length Decoder for 12-bit Base Fields
@@ -107,8 +113,9 @@ public partial class Bindings {
             {
                 extensions++;
                 temp = (ushort)(temp << 1);
-                // Safety clamp
-                if (extensions > 8) break; 
+                // Safety clamp: Protocol allows more, but we cap at 3 for implementation safety (max ~1GB)
+                if (extensions > 3) 
+                    throw new ArgumentException("Too many field extension bytes.", nameof(data)); 
             }
 
             if (extensions == 0) return baseValue;
@@ -149,7 +156,8 @@ public partial class Bindings {
             // Read extension bytes
             for (int i = 0; i < extensions; i++)
             {
-                if (offset >= data.Length) throw new IndexOutOfRangeException("Not enough data for extensions");
+                if (offset >= data.Length) 
+                    throw new ArgumentException("Data too short for header extensions.", nameof(data));
                 value = (value << 8) | data[offset++];
             }
             return value;

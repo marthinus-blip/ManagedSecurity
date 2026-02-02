@@ -487,3 +487,6 @@ $RECYCLE.BIN/
 local_lib/
 bin_win/
 local-packages/
+
+# Next steps
+.next.md

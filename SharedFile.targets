@@ -7,11 +7,11 @@
 
     <PropertyGroup>
       <!-- 2. Clean 'v' and extract the numeric prefix (e.g., 1.2.3) -->
-      <CleanTag>$(RawTag.TrimStart('v'))</CleanTag>
+      <CleanTag>$([System.Text.RegularExpressions.Regex]::Match($(RawTag), '^[^vV][0-9]+\.[0-9]+\.[0-9]+'))</CleanTag>
        <!-- Fallback if tag is empty -->
       <CleanTag Condition="'$(CleanTag)' == ''">0.0.1</CleanTag>
       <VersionPrefix>$([System.Text.RegularExpressions.Regex]::Match($(CleanTag), '^[0-9]+\.[0-9]+\.[0-9]+'))</VersionPrefix>
-      <GitTagSuffix>$([System.Text.RegularExpressions.Regex]::Match($(RawTag), '-(.*)$').Value.TrimStart("-"))</GitTagSuffix>
+      <GitTagSuffix>$(RawTag.Replace($(CleanTag), ""))</GitTagSuffix>
       
       <!-- 3. Define the Suffix -->
       <!-- If on CI (GitHub Actions), use the build number. Otherwise, use a local timestamp. -->
@@ -24,7 +24,11 @@
       <PackageVersion>$(VersionPrefix)$(VersionSuffix)</PackageVersion>
     </PropertyGroup>
 
+    <Message Text="RawTag: $(RawTag)" Importance="high" />
+    <Message Text="CleanTag: $(CleanTag)" Importance="high" />
+    <Message Text="VersionPrefix: $(VersionPrefix)" Importance="high" />
     <Message Text="GitTagSuffix: $(GitTagSuffix)" Importance="high" />
+    <Message Text="VersionSuffix: $(VersionSuffix)" Importance="high" />
     <Message Text="Built Version: $(VersionPrefix)$(VersionSuffix)" Importance="high" />
   </Target>
 </Project>

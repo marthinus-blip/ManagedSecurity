@@ -15,3 +15,7 @@ Add this package to your .NET 8+ project:
 ```bash
 dotnet add package ManagedSecurity.Common
 ```
+
+## Note:
+- Git are used to denote versions with the prefix `v` (e.g. `v0.0.2`)
+- Git tags are case sensitive, so use `v0.0.2` instead of `V0.0.2`.

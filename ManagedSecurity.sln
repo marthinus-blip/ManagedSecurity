@@ -1,4 +1,4 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -7,6 +7,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedSecurity.Core", "ManagedSecurity.Core\ManagedSecurity.Core.csproj", "{F0CA02FF-E9AD-FF9C-C294-96A2413A1583}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedSecurity.Test", "ManagedSecurity.Test\ManagedSecurity.Test.csproj", "{F2237069-3C84-0DF0-EE3B-AC6ED7688F0C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedSecurity.ConsumerDemo", "ManagedSecurity.ConsumerDemo\ManagedSecurity.ConsumerDemo.csproj", "{F1007D80-CCD2-4373-808A-C9EDFCE450AD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,6 +28,10 @@ Global
 		{F2237069-3C84-0DF0-EE3B-AC6ED7688F0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2237069-3C84-0DF0-EE3B-AC6ED7688F0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2237069-3C84-0DF0-EE3B-AC6ED7688F0C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1007D80-CCD2-4373-808A-C9EDFCE450AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1007D80-CCD2-4373-808A-C9EDFCE450AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1007D80-CCD2-4373-808A-C9EDFCE450AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1007D80-CCD2-4373-808A-C9EDFCE450AD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

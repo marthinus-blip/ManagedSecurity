@@ -52,12 +52,11 @@ namespace ManagedSecurity.Core
             using var aes = new AesGcm(key.Span, MacLength);
             
             // Inputs:
-            var nonce = buffer.AsSpan(h.IvOffset, IvLength); // IV
-            // var plaintext = plaintext; 
+            var nonce = h.GetIv(buffer); // IV
             
             // Outputs:
-            var ciphertextDst = buffer.AsSpan(h.PayloadOffset, plaintext.Length);
-            var tagDst = buffer.AsSpan(h.MacOffset, MacLength);
+            var ciphertextDst = h.GetPayload(buffer);
+            var tagDst = h.GetMac(buffer);
             // Wait, does AesGcm write MAC to tagDst? 
             // Yes: Encrypt(nonce, plaintext, ciphertext, tag, associatedData)
 
@@ -82,22 +81,8 @@ namespace ManagedSecurity.Core
         /// <returns>Plaintext byte array.</returns>
         public byte[] Decrypt(ReadOnlySpan<byte> message)
         {
-            // 1. Parse Header
-            var h = new Bindings.Header(message.ToArray()); // Copy needed? Header ctor takes Memory/Array, not Span yet? 
-            // Our Header struct takes ReadOnlyMemory<byte> or byte[]. 
-            // If the input is Span, we MUST copy because Header struct holds Memory<T>.
-            // TODO: Refactor Header to be ref struct? No, then it can't be stored. 
-            // For optimal perf, we should just parse raw bytes here?
-            // Actually, `Bindings.Header` is `readonly struct` but holds `ReadOnlyMemory`.
-            // So we need heap memory.
-            
-            // If message passed in is ALREADY an array in disguise, we might be okay?
-            // But API signature is ReadOnlySpan.
-            // Let's alloc 'header view' only? No, we need the whole message for decryption.
-            
-            // Let's assume input 'message' is safe to wrap in Memory if we change API to ReadOnlyMemory.
-            // Or just copy for safety now.
-            // Wait, `message` is the ciphertext packet.
+            // 1. Parse Header (Zero Allocation)
+            var h = new Bindings.Header(message);
             
             // 2. Extract Key
             var key = _keyProvider.GetKey(h.KeyIndex);
@@ -109,9 +94,9 @@ namespace ManagedSecurity.Core
             using var aes = new AesGcm(key.Span, h.MacLength);
 
             // 4. Decrypt
-            var nonce = h.Iv;
-            var ciphertext = h.Payload;
-            var tag = h.Mac;
+            var nonce = h.GetIv(message);
+            var ciphertext = h.GetPayload(message);
+            var tag = h.GetMac(message);
             var associatedData = message.Slice(0, h.IvOffset); // Authenticate Header!
 
             // Allocate result
@@ -136,7 +121,7 @@ namespace ManagedSecurity.Core
 
         public byte[] Decrypt(ReadOnlyMemory<byte> message)
         {
-             var h = new Bindings.Header(message);
+             var h = new Bindings.Header(message.Span);
              var key = _keyProvider.GetKey(h.KeyIndex);
              
              if (h.IvLength != 12 || h.MacLength != 16)
@@ -144,10 +129,10 @@ namespace ManagedSecurity.Core
 
              using var aes = new AesGcm(key.Span, h.MacLength);
              
-             // Span slicing from Memory
-             var nonce = h.Iv; 
-             var ciphertext = h.Payload;
-             var tag = h.Mac;
+             // Span slicing from Memory (Zero Allocation)
+             var nonce = h.GetIv(message.Span); 
+             var ciphertext = h.GetPayload(message.Span);
+             var tag = h.GetMac(message.Span);
              var associatedData = message.Span.Slice(0, h.IvOffset);
 
              byte[] plaintext = new byte[h.PayloadLength];

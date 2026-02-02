@@ -21,17 +21,12 @@ public partial class Bindings {
         public int PayloadOffset { get; }
         public int TotalLength { get; }
 
-        private readonly ReadOnlyMemory<byte> _data;
-
-        public Header(byte[] data) : this(new ReadOnlyMemory<byte>(data)) { }
-
-        public Header(ReadOnlyMemory<byte> data)
+        public Header(ReadOnlySpan<byte> data)
         {
             if (data.Length < FixedHeaderSize)
                 throw new ArgumentException("Data too short for header", nameof(data));
 
-            _data = data;
-            var span = data.Span;
+            var span = data;
 
             // Reconstruct 32-bit word (Big Endian)
             uint h = (uint)((span[0] << 24) | (span[1] << 16) | (span[2] << 8) | span[3]);
@@ -100,7 +95,7 @@ public partial class Bindings {
         }
 
         // Variable Length Decoder for 12-bit Base Fields
-        private static int DecodeVariableLength12(ushort baseValue, ReadOnlyMemory<byte> data, ref int offset)
+        private static int DecodeVariableLength12(ushort baseValue, ReadOnlySpan<byte> data, ref int offset)
         {
             // Count leading ones in the 12-bit value (0x800 is High bit for 12-bit int)
             // 0x800 = 1000 0000 0000
@@ -152,18 +147,21 @@ public partial class Bindings {
             int value = baseValue & ((1 << (12 - bitsToStrip)) - 1);
 
             // Read extension bytes
-            var span = data.Span;
             for (int i = 0; i < extensions; i++)
             {
                 if (offset >= data.Length) throw new IndexOutOfRangeException("Not enough data for extensions");
-                value = (value << 8) | span[offset++];
+                value = (value << 8) | data[offset++];
             }
             return value;
         }
 
-        public ReadOnlySpan<byte> Iv => _data.Span.Slice(IvOffset, IvLength);
-        public ReadOnlySpan<byte> Mac => _data.Span.Slice(MacOffset, MacLength);
-        public ReadOnlySpan<byte> Payload => _data.Span.Slice(PayloadOffset, PayloadLength);
+        public readonly ReadOnlySpan<byte> GetIv(ReadOnlySpan<byte> message) => message.Slice(IvOffset, IvLength);
+        public readonly ReadOnlySpan<byte> GetMac(ReadOnlySpan<byte> message) => message.Slice(MacOffset, MacLength);
+        public readonly ReadOnlySpan<byte> GetPayload(ReadOnlySpan<byte> message) => message.Slice(PayloadOffset, PayloadLength);
+
+        public readonly Span<byte> GetIv(Span<byte> message) => message.Slice(IvOffset, IvLength);
+        public readonly Span<byte> GetMac(Span<byte> message) => message.Slice(MacOffset, MacLength);
+        public readonly Span<byte> GetPayload(Span<byte> message) => message.Slice(PayloadOffset, PayloadLength);
 
         // =========================================================================================
         // WRITE / BUILDER API

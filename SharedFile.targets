@@ -1,5 +1,5 @@
 <Project>
-  <Target Name="AutoVersion" BeforeTargets="PrepareForBuild">
+  <Target Name="AutoVersion" BeforeTargets="PrepareForBuild;GetAssemblyVersion;GetPackageVersion;GenerateNuspec">
     <!-- 1. Capture Git Tag -->
     <Exec Command="git describe --tags --always" ConsoleToMSBuild="true" IgnoreExitCode="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="RawTag" />
@@ -7,11 +7,14 @@
 
     <PropertyGroup>
       <!-- 2. Clean 'v' and extract the numeric prefix (e.g., 1.2.3) -->
-      <CleanTag>$([System.Text.RegularExpressions.Regex]::Match($(RawTag), '^[^vV][0-9]+\.[0-9]+\.[0-9]+'))</CleanTag>
-       <!-- Fallback if tag is empty -->
+      <!-- Improved regex: match the first sequence of digits.dot.digits.dot.digits -->
+      <CleanTag>$([System.Text.RegularExpressions.Regex]::Match($(RawTag), '[0-9]+\.[0-9]+\.[0-9]+'))</CleanTag>
+      
+      <!-- Fallback if tag is empty or doesn't match -->
       <CleanTag Condition="'$(CleanTag)' == ''">0.0.1</CleanTag>
-      <VersionPrefix>$([System.Text.RegularExpressions.Regex]::Match($(CleanTag), '^[0-9]+\.[0-9]+\.[0-9]+'))</VersionPrefix>
-      <GitTagSuffix>$(RawTag.Replace($(CleanTag), ""))</GitTagSuffix>
+      
+      <VersionPrefix>$(CleanTag)</VersionPrefix>
+      <GitTagSuffix>$(RawTag.Replace("v", "").Replace($(CleanTag), ""))</GitTagSuffix>
       
       <!-- 3. Define the Suffix -->
       <!-- If on CI (GitHub Actions), use the build number. Otherwise, use a local timestamp. -->
@@ -26,8 +29,7 @@
 
     <Message Text="RawTag: $(RawTag)" Importance="high" />
     <Message Text="CleanTag: $(CleanTag)" Importance="low" />
-    <Message Text="GitTagSuffix: $(GitTagSuffix)" Importance="low" />
-    <Message Text="VersionSuffix: $(VersionSuffix)" Importance="low" />
-    <Message Text="Built Version: $(VersionPrefix)$(VersionSuffix)" Importance="high" />
+    <Message Text="Version: $(Version)" Importance="high" />
+    <Message Text="Built Version: $(Version)" Importance="high" />
   </Target>
 </Project>

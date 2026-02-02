@@ -25,10 +25,9 @@
     </PropertyGroup>
 
     <Message Text="RawTag: $(RawTag)" Importance="high" />
-    <Message Text="CleanTag: $(CleanTag)" Importance="high" />
-    <Message Text="VersionPrefix: $(VersionPrefix)" Importance="high" />
-    <Message Text="GitTagSuffix: $(GitTagSuffix)" Importance="high" />
-    <Message Text="VersionSuffix: $(VersionSuffix)" Importance="high" />
+    <Message Text="CleanTag: $(CleanTag)" Importance="low" />
+    <Message Text="GitTagSuffix: $(GitTagSuffix)" Importance="low" />
+    <Message Text="VersionSuffix: $(VersionSuffix)" Importance="low" />
     <Message Text="Built Version: $(VersionPrefix)$(VersionSuffix)" Importance="high" />
   </Target>
 </Project>

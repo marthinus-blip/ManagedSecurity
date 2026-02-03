@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedSecurity.ConsumerDem
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedSecurity.Fuzz", "ManagedSecurity.Fuzz\ManagedSecurity.Fuzz.csproj", "{BA27DFA0-E28C-4AF4-A681-22A803FE9C93}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedSecurity.Benchmarks", "ManagedSecurity.Benchmarks\ManagedSecurity.Benchmarks.csproj", "{8FF5BBE3-DCAE-4C4D-A367-02AB1C66606F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,6 +40,10 @@ Global
 		{BA27DFA0-E28C-4AF4-A681-22A803FE9C93}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BA27DFA0-E28C-4AF4-A681-22A803FE9C93}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BA27DFA0-E28C-4AF4-A681-22A803FE9C93}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8FF5BBE3-DCAE-4C4D-A367-02AB1C66606F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8FF5BBE3-DCAE-4C4D-A367-02AB1C66606F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8FF5BBE3-DCAE-4C4D-A367-02AB1C66606F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8FF5BBE3-DCAE-4C4D-A367-02AB1C66606F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

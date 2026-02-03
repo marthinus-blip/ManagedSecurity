@@ -13,104 +13,172 @@ namespace ManagedSecurity.Core
             _keyProvider = keyProvider ?? throw new ArgumentNullException(nameof(keyProvider));
         }
 
-        /// <summary>
-        /// Encrypts plaintext using AES-GCM (S=0 profile).
-        /// </summary>
-        /// <returns>A new byte array containing the full binary message (Header + IV + MAC + Ciphertext).</returns>
-        public byte[] Encrypt(ReadOnlySpan<byte> plaintext, int keyIndex)
+        public int GetRequiredSize(int plaintextLength, int keyIndex, bool highSecurity = false)
         {
-            // 1. Fetch Key
-            var key = _keyProvider.GetKey(keyIndex);
-            
-            // 2. Validate Profile (S=0 -> GCM)
-            // IV=12 bytes (96 bits)
-            const int IvLength = 12;
-            const int MacLength = 16;
-            bool highSecurity = false; // S=0
+             return Bindings.Header.GetRequiredSize(plaintextLength, keyIndex, highSecurity);
+        }
 
-            // 3. Calculate Size
-            int requiredSize = Bindings.Header.GetRequiredSize(plaintext.Length, keyIndex, highSecurity);
-            byte[] buffer = new byte[requiredSize];
-
-            // 4. Write Header
-            Bindings.Header.Write(buffer, plaintext.Length, keyIndex, highSecurity);
-
-            // 5. Generate IV
-            // The writer logic puts IV immediately after the header+extensions.
-            // We need to parse our own buffer (or calculate offset) to find where to put IV.
-            // Optimization: We could have Header.Write return the payload offset or lengths.
-            // For now, let's just re-parse the header we just wrote to find precise offsets. 
-            // It's cheap (zero copy).
-            var h = new Bindings.Header(buffer);
-            
-            // h.IvOffset is where IV starts.
-            // h.Iv is a span we can fill.
-            RandomNumberGenerator.Fill(buffer.AsSpan(h.IvOffset, IvLength));
-
-            // 6. Encrypt
-            // AesGcm(key)
-            using var aes = new AesGcm(key.Span, MacLength);
-            
-            // Inputs:
-            var nonce = h.GetIv(buffer); // IV
-            
-            // Outputs:
-            var ciphertextDst = h.GetPayload(buffer);
-            var tagDst = h.GetMac(buffer);
-            // Wait, does AesGcm write MAC to tagDst? 
-            // Yes: Encrypt(nonce, plaintext, ciphertext, tag, associatedData)
-
-            // Auth Data: We should authenticate the header so it can't be tampered with!
-            // The header bits (Header + Extensions) are at 0..IvOffset.
-            var associatedData = buffer.AsSpan(0, h.IvOffset);
-
-            aes.Encrypt(
-                nonce,
-                plaintext,
-                ciphertextDst,
-                tagDst,
-                associatedData
-            );
-
+        public byte[] Encrypt(ReadOnlySpan<byte> plaintext, int keyIndex, bool highSecurity = false)
+        {
+            byte[] buffer = new byte[GetRequiredSize(plaintext.Length, keyIndex, highSecurity)];
+            Encrypt(plaintext, buffer, keyIndex, highSecurity);
             return buffer;
         }
 
-        /// <summary>
-        /// Decrypts a full binary message.
-        /// </summary>
-        /// <returns>Plaintext byte array.</returns>
+        public void Encrypt(ReadOnlySpan<byte> plaintext, Span<byte> destination, int keyIndex, bool highSecurity = false)
+        {
+            if (highSecurity)
+                EncryptS1(plaintext, destination, keyIndex);
+            else
+                EncryptS0(plaintext, destination, keyIndex);
+        }
+
+        private void EncryptS0(ReadOnlySpan<byte> plaintext, Span<byte> destination, int keyIndex)
+        {
+            var key = _keyProvider.GetKey(keyIndex);
+            const int MacLength = 16;
+            
+            Bindings.Header.Write(destination, plaintext.Length, keyIndex, false);
+            var h = new Bindings.Header(destination);
+            
+            RandomNumberGenerator.Fill(destination.Slice(h.IvOffset, h.IvLength));
+
+            using var aes = new AesGcm(key.Span, MacLength);
+            
+            var nonce = h.GetIv(destination);
+            var ciphertextDst = h.GetPayload(destination);
+            var tagDst = h.GetMac(destination);
+            var associatedData = destination.Slice(0, h.IvOffset);
+
+            aes.Encrypt(nonce, plaintext, ciphertextDst, tagDst, associatedData);
+        }
+
+        private void EncryptS1(ReadOnlySpan<byte> plaintext, Span<byte> destination, int keyIndex)
+        {
+            // S=1: AES-GCM-SIV (Synthetic IV via HMAC-SHA256)
+            var masterKey = _keyProvider.GetKey(keyIndex);
+            
+            Bindings.Header.Write(destination, plaintext.Length, keyIndex, true);
+            var h = new Bindings.Header(destination);
+            
+            // 1. Generate Input Nonce (16 bytes)
+            var inputNonce = h.GetIv(destination);
+            RandomNumberGenerator.Fill(inputNonce);
+
+            // 2. Derive Subkeys (Encryption & Authentication)
+            Span<byte> prk = stackalloc byte[32];
+            HKDF.Extract(HashAlgorithmName.SHA256, masterKey.Span, inputNonce, prk);
+            
+            Span<byte> encKey = stackalloc byte[32];
+            Span<byte> authKey = stackalloc byte[32];
+            HKDF.Expand(HashAlgorithmName.SHA256, prk, encKey, "ManagedSecurity S1 ENC"u8);
+            HKDF.Expand(HashAlgorithmName.SHA256, prk, authKey, "ManagedSecurity S1 MAC"u8);
+
+            // 3. Compute Synthetic Tag (SIV)
+            // We use HMAC to derive the IV from the plaintext for nonce-misuse resistance.
+            var associatedData = destination.Slice(0, h.IvOffset + h.IvLength);
+            var tagDst = h.GetMac(destination);
+            
+            Span<byte> hmacFull = stackalloc byte[32];
+            IncrementalHash hmac = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, authKey);
+            hmac.AppendData(associatedData);
+            hmac.AppendData(plaintext);
+            hmac.GetHashAndReset(hmacFull);
+
+            // 4. Encrypt with Synthetic IV (First 12 bytes of HMAC)
+            var iv = hmacFull.Slice(0, 12);
+            var ciphertextDst = h.GetPayload(destination);
+            
+            using var aes = new AesGcm(encKey, 16);
+            Span<byte> gcmTag = stackalloc byte[16];
+            
+            aes.Encrypt(iv, plaintext, ciphertextDst, gcmTag, associatedData);
+
+            // 5. Store combined Tag: [16 bytes GCM Tag][16 bytes HMAC]
+            gcmTag.CopyTo(tagDst.Slice(0, 16));
+            hmacFull.Slice(0, 16).CopyTo(tagDst.Slice(16, 16));
+        }
+
         public byte[] Decrypt(ReadOnlySpan<byte> message)
         {
-            // 1. Parse Header (Zero Allocation)
+            var h = new Bindings.Header(message);
+            byte[] plaintext = new byte[h.PayloadLength];
+            Decrypt(message, plaintext);
+            return plaintext;
+        }
+
+        public void Decrypt(ReadOnlySpan<byte> message, Span<byte> destination)
+        {
             var h = new Bindings.Header(message);
             
-            // 2. Extract Key
+            if (h.IvLength == 12 && h.MacLength == 16)
+            {
+                DecryptS0(h, message, destination);
+            }
+            else if (h.IvLength == 16 && h.MacLength == 32)
+            {
+                DecryptS1(h, message, destination);
+            }
+            else
+            {
+                throw new NotSupportedException($"Unsupported header profile: IV={h.IvLength}, MAC={h.MacLength}");
+            }
+        }
+
+        private void DecryptS0(Bindings.Header h, ReadOnlySpan<byte> message, Span<byte> destination)
+        {
             var key = _keyProvider.GetKey(h.KeyIndex);
-
-            // 3. Setup AES
-            if (h.IvLength != 12 || h.MacLength != 16)
-                throw new NotSupportedException("Only S=0 (AES-GCM) is supported currently.");
-
             using var aes = new AesGcm(key.Span, h.MacLength);
 
-            // 4. Decrypt
             var nonce = h.GetIv(message);
             var ciphertext = h.GetPayload(message);
             var tag = h.GetMac(message);
-            var associatedData = message.Slice(0, h.IvOffset); // Authenticate Header!
+            var associatedData = message.Slice(0, h.IvOffset);
 
-            // Allocate result
-            byte[] plaintext = new byte[h.PayloadLength];
+            aes.Decrypt(nonce, ciphertext, tag, destination, associatedData);
+        }
 
-            aes.Decrypt(
-                nonce,
-                ciphertext,
-                tag,
-                plaintext,
-                associatedData
-            );
+        private void DecryptS1(Bindings.Header h, ReadOnlySpan<byte> message, Span<byte> destination)
+        {
+            var masterKey = _keyProvider.GetKey(h.KeyIndex);
+            var inputNonce = h.GetIv(message);
 
-            return plaintext;
+            // 1. Derive Subkeys
+            Span<byte> prk = stackalloc byte[32];
+            HKDF.Extract(HashAlgorithmName.SHA256, masterKey.Span, inputNonce, prk);
+
+            Span<byte> encKey = stackalloc byte[32];
+            Span<byte> authKey = stackalloc byte[32];
+            HKDF.Expand(HashAlgorithmName.SHA256, prk, encKey, "ManagedSecurity S1 ENC"u8);
+            HKDF.Expand(HashAlgorithmName.SHA256, prk, authKey, "ManagedSecurity S1 MAC"u8);
+
+            // 2. Extract Combined Tag
+            var combinedTag = h.GetMac(message);
+            var gcmTag = combinedTag.Slice(0, 16);
+            var hmacStored = combinedTag.Slice(16, 16);
+            
+            // 3. Reconstruct IV from stored HMAC part
+            var iv = hmacStored.Slice(0, 12);
+            var ciphertext = h.GetPayload(message);
+            var associatedData = message.Slice(0, h.IvOffset + h.IvLength);
+
+            using var aes = new AesGcm(encKey, 16);
+            
+            // 4. Decrypt and validate GCM Tag
+            aes.Decrypt(iv, ciphertext, gcmTag, destination, associatedData);
+
+            // 5. Validate HMAC (Second layer of protection)
+            Span<byte> hmacComputed = stackalloc byte[32];
+            IncrementalHash hmac = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, authKey);
+            hmac.AppendData(associatedData);
+            hmac.AppendData(destination);
+            hmac.GetHashAndReset(hmacComputed);
+
+            if (!CryptographicOperations.FixedTimeEquals(hmacComputed.Slice(0, 16), hmacStored))
+            {
+                CryptographicOperations.ZeroMemory(destination);
+                throw new CryptographicException("SIV HMAC Authentication failed.");
+            }
         }
         
         // Overload to avoid copy if caller has Memory
@@ -121,31 +189,7 @@ namespace ManagedSecurity.Core
 
         public byte[] Decrypt(ReadOnlyMemory<byte> message)
         {
-             var h = new Bindings.Header(message.Span);
-             var key = _keyProvider.GetKey(h.KeyIndex);
-             
-             if (h.IvLength != 12 || h.MacLength != 16)
-                throw new NotSupportedException("Only S=0 (AES-GCM) is supported currently.");
-
-             using var aes = new AesGcm(key.Span, h.MacLength);
-             
-             // Span slicing from Memory (Zero Allocation)
-             var nonce = h.GetIv(message.Span); 
-             var ciphertext = h.GetPayload(message.Span);
-             var tag = h.GetMac(message.Span);
-             var associatedData = message.Span.Slice(0, h.IvOffset);
-
-             byte[] plaintext = new byte[h.PayloadLength];
-             
-             aes.Decrypt(
-                nonce,
-                ciphertext,
-                tag,
-                plaintext,
-                associatedData
-             );
-
-             return plaintext;
+             return Decrypt(message.Span);
         }
     }
 }

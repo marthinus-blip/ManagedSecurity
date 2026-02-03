@@ -67,4 +67,30 @@ public class CipherTests
             cipher.Decrypt(msg);
         });
     }
+
+    [TestMethod, TestCategory("RoundTrip")]
+    public void HighSecurity_RoundTrip_Success()
+    {
+        var provider = new MockKeyProvider();
+        var cipher = new Cipher(provider);
+        
+        string secretText = "High Security Secret!";
+        byte[] plain = Encoding.UTF8.GetBytes(secretText);
+        int keyIndex = 999;
+
+        // 1. Encrypt with High Security
+        byte[] encryptedMessage = cipher.Encrypt(plain, keyIndex, highSecurity: true);
+
+        // Verify Header
+        var h = new Bindings.Header(encryptedMessage);
+        Assert.AreEqual(16, h.IvLength); // SIV Nonce
+        Assert.AreEqual(32, h.MacLength); // SIV HMAC Tag
+        Assert.AreEqual(keyIndex, h.KeyIndex);
+
+        // 2. Decrypt
+        byte[] decryptedBytes = cipher.Decrypt(encryptedMessage);
+        string decryptedText = Encoding.UTF8.GetString(decryptedBytes);
+
+        Assert.AreEqual(secretText, decryptedText);
+    }
 }

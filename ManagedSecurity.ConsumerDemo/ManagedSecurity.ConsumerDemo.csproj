@@ -16,8 +16,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ManagedSecurity.Common" Version="$(PackageVersion)" />
-    <PackageReference Include="ManagedSecurity.Core" Version="$(PackageVersion)" />
+    <ProjectReference Include="..\ManagedSecurity.Common\ManagedSecurity.Common.csproj" />
+    <ProjectReference Include="..\ManagedSecurity.Core\ManagedSecurity.Core.csproj" />
   </ItemGroup>
 
 </Project>

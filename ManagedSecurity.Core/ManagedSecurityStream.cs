@@ -19,14 +19,27 @@ public class ManagedSecurityStream : Stream
     private readonly int _keyIndex;
     private readonly bool _highSecurity;
     private readonly ManagedSecurityStreamMode _mode;
-    private readonly int _chunkSize;
+    private int _chunkSize;
     private byte[]? _metadata;
+    private ulong _seekTableOffset;
 
     private readonly byte[] _buffer;
     private int _bufferPos;
     private ulong _sequenceNumber;
     private bool _isHeaderProcessed;
     private bool _isFinalBlockProcessed;
+
+    private readonly bool _leaveOpen;
+    private readonly List<SeekPoint> _seekPoints = new();
+    private readonly DateTimeOffset _streamStartTime = DateTimeOffset.UtcNow;
+
+    // Telemetry
+    public long TotalBytesProcessed { get; private set; }
+    public int FrameCount { get; private set; }
+    public double LastFrameDurationMs { get; private set; }
+    public double ThroughputMbps { get; private set; }
+    private readonly System.Diagnostics.Stopwatch _stopwatch = new();
+
 
     // Master Header Constants
     private static ReadOnlySpan<byte> StreamMagic => "MSG"u8;
@@ -39,7 +52,8 @@ public class ManagedSecurityStream : Stream
         int keyIndex = 0, 
         bool highSecurity = false,
         int chunkSize = 64 * 1024,
-        byte[]? metadata = null)
+        byte[]? metadata = null,
+        bool leaveOpen = false)
     {
         _innerStream = innerStream ?? throw new ArgumentNullException(nameof(innerStream));
         _cipher = cipher ?? throw new ArgumentNullException(nameof(cipher));
@@ -48,6 +62,7 @@ public class ManagedSecurityStream : Stream
         _highSecurity = highSecurity;
         _chunkSize = chunkSize;
         _metadata = metadata;
+        _leaveOpen = leaveOpen;
 
         // We use S=2 (Streaming Profile) which includes the 8-byte sequence number
         const int ProfileId = 2;
@@ -55,6 +70,7 @@ public class ManagedSecurityStream : Stream
         int overhead = _cipher.GetRequiredSize(chunkSize, keyIndex, ProfileId) - chunkSize;
         _buffer = new byte[overhead + chunkSize];
     }
+
 
     public override bool CanRead => _mode == ManagedSecurityStreamMode.Decrypt;
     public override bool CanWrite => _mode == ManagedSecurityStreamMode.Encrypt;
@@ -68,11 +84,18 @@ public class ManagedSecurityStream : Stream
     /// Forcefully encrypts any data in the current buffer into a frame.
     /// Use this at critical media boundaries (e.g., H264 I-Frames).
     /// </summary>
-    public void FlushToFrame()
+    public void FlushToFrame(uint? timestampMs = null)
     {
         if (_mode != ManagedSecurityStreamMode.Encrypt)
             throw new InvalidOperationException("FlushToFrame is only supported in Encrypt mode.");
             
+        // If it's a seekable stream, we record the offset of this new frame start
+        if (_innerStream.CanSeek)
+        {
+            uint ts = timestampMs ?? (uint)(DateTimeOffset.UtcNow - _streamStartTime).TotalMilliseconds;
+            _seekPoints.Add(new SeekPoint(ts, (ulong)_innerStream.Position));
+        }
+
         ProcessCurrentBlock(isFinal: false);
     }
 
@@ -99,8 +122,9 @@ public class ManagedSecurityStream : Stream
             
             // Layout of _buffer: [Header Space] [Payload Space]
             const int ProfileId = 2;
-            int baseSize = _cipher.GetRequiredSize(0, _keyIndex, ProfileId);
+            int baseSize = _cipher.GetRequiredSize(_chunkSize, _keyIndex, ProfileId) - _chunkSize;
             buffer.Slice(bufferOffset, toCopy).CopyTo(_buffer.AsSpan(baseSize + _bufferPos));
+
             
             _bufferPos += toCopy;
             bufferOffset += toCopy;
@@ -113,16 +137,11 @@ public class ManagedSecurityStream : Stream
         }
     }
 
-    private void WriteProtocolHeader()
+    private void WriteProtocolHeader(ulong seekTableOffset = 0)
     {
-        Span<byte> master = stackalloc byte[14];
-        StreamMagic.CopyTo(master);
-        master[3] = StreamVersion;
-        BinaryPrimitives.WriteInt32BigEndian(master.Slice(4), _chunkSize);
-        BinaryPrimitives.WriteInt32BigEndian(master.Slice(8), _keyIndex);
-        
         ushort metaLen = (ushort)(_metadata?.Length ?? 0);
-        BinaryPrimitives.WriteUInt16BigEndian(master.Slice(12), metaLen);
+        Span<byte> master = stackalloc byte[MasterHeader.FixedSize];
+        MasterHeader.Write(master, StreamVersion, _chunkSize, _keyIndex, metaLen, seekTableOffset);
         
         _innerStream.Write(master);
         if (metaLen > 0)
@@ -130,7 +149,6 @@ public class ManagedSecurityStream : Stream
             _innerStream.Write(_metadata!);
         }
     }
-
     private void ProcessCurrentBlock(bool isFinal)
     {
         if (_bufferPos == 0 && !isFinal) return;
@@ -140,15 +158,31 @@ public class ManagedSecurityStream : Stream
         int baseHeaderSize = _cipher.GetRequiredSize(_chunkSize, _keyIndex, ProfileId) - _chunkSize;
         Span<byte> plaintext = _buffer.AsSpan(baseHeaderSize, _bufferPos);
         
+        _stopwatch.Restart();
+
         // Encrypt with ProfileId=2 and our sequenceNumber
         _cipher.Encrypt(plaintext, _buffer, _keyIndex, ProfileId, _sequenceNumber);
+        _stopwatch.Stop();
         
+        LastFrameDurationMs = _stopwatch.Elapsed.TotalMilliseconds;
+        TotalBytesProcessed += _bufferPos;
+        FrameCount++;
+        
+        // Calculate Throughput (Mbps)
+        double totalSeconds = (DateTimeOffset.UtcNow - _streamStartTime).TotalSeconds;
+        if (totalSeconds > 0)
+        {
+            ThroughputMbps = (TotalBytesProcessed * 8.0) / (totalSeconds * 1000 * 1000);
+        }
+
         int packetSize = _cipher.GetRequiredSize(_bufferPos, _keyIndex, ProfileId);
         _innerStream.Write(_buffer, 0, packetSize);
         
         _bufferPos = 0;
         _sequenceNumber++;
     }
+
+
 
     protected override void Dispose(bool disposing)
     {
@@ -158,12 +192,30 @@ public class ManagedSecurityStream : Stream
             {
                 ProcessCurrentBlock(isFinal: true);
                 _isFinalBlockProcessed = true;
+
+                if (_innerStream.CanSeek && _seekPoints.Count > 0)
+                {
+                    // Write Seek Table at the end
+                    ulong seekOffset = (ulong)_innerStream.Position;
+                    byte[] seekData = SeekTableSerializer.Serialize(_seekPoints);
+                    _innerStream.Write(seekData);
+
+                    // Update Master Header
+                    _innerStream.Position = 0;
+                    WriteProtocolHeader(seekOffset);
+                    _innerStream.Position = (long)(seekOffset + (ulong)seekData.Length);
+                }
+
                 _innerStream.Flush();
             }
-            _innerStream.Dispose();
+            if (!_leaveOpen)
+            {
+                _innerStream.Dispose();
+            }
         }
         base.Dispose(disposing);
     }
+
 
     private int _readBufferOffset;
     private int _readBufferCount;
@@ -213,32 +265,30 @@ public class ManagedSecurityStream : Stream
 
     private void ReadProtocolHeader()
     {
-        Span<byte> master = stackalloc byte[14];
+        Span<byte> masterData = stackalloc byte[MasterHeader.FixedSize];
         int read = 0;
-        while (read < 14)
+        while (read < MasterHeader.FixedSize)
         {
-            int r = _innerStream.Read(master.Slice(read));
+            int r = _innerStream.Read(masterData.Slice(read));
             if (r == 0) throw new EndOfStreamException("Master header truncated.");
             read += r;
         }
 
-        if (!master.Slice(0, 3).SequenceEqual(StreamMagic))
-            throw new InvalidDataException("Invalid stream magic.");
+        var master = new MasterHeader(masterData);
+        _seekTableOffset = master.SeekTableOffset;
         
-        if (master[3] != StreamVersion)
-            throw new NotSupportedException($"Unsupported stream version: {master[3]}");
+        if (master.Version != StreamVersion)
+            throw new NotSupportedException($"Unsupported stream version: {master.Version}");
 
         // Note: For now we assume the caller matches the chunk size or we use what's in the header.
-        // In a real implementation, we'd adjust _chunkSize and re-allocate _buffer if needed.
         
-        ushort metaLen = BinaryPrimitives.ReadUInt16BigEndian(master.Slice(12));
-        if (metaLen > 0)
+        if (master.MetadataLength > 0)
         {
-            byte[] meta = new byte[metaLen];
+            byte[] meta = new byte[master.MetadataLength];
             int metaRead = 0;
-            while (metaRead < metaLen)
+            while (metaRead < master.MetadataLength)
             {
-                int r = _innerStream.Read(meta, metaRead, metaLen - metaRead);
+                int r = _innerStream.Read(meta, metaRead, master.MetadataLength - metaRead);
                 if (r == 0) throw new EndOfStreamException("Metadata truncated.");
                 metaRead += r;
             }
@@ -307,11 +357,25 @@ public class ManagedSecurityStream : Stream
         }
 
         // 6. Decrypt and Validate Sequence
-        const int ProfileId = 2;
         
         // Use the actual header size of THIS frame
         int headerSize = h.TotalLength - h.PayloadLength;
+        
+        _stopwatch.Restart();
         _cipher.Decrypt(_buffer.AsSpan(0, h.TotalLength), _buffer.AsSpan(headerSize));
+        _stopwatch.Stop();
+
+        LastFrameDurationMs = _stopwatch.Elapsed.TotalMilliseconds;
+        TotalBytesProcessed += h.PayloadLength;
+        FrameCount++;
+
+        // Calculate Throughput (Mbps)
+        double totalSeconds = (DateTimeOffset.UtcNow - _streamStartTime).TotalSeconds;
+        if (totalSeconds > 0)
+        {
+            ThroughputMbps = (TotalBytesProcessed * 8.0) / (totalSeconds * 1000 * 1000);
+        }
+
 
         // 7. Check Sequence Number
         ulong frameSeq = BinaryPrimitives.ReadUInt64BigEndian(h.GetSequence(_buffer));

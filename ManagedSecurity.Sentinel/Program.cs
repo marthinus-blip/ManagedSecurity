@@ -28,6 +28,8 @@ class Program
                 "record" => DoRecord(args),
                 "extract" => DoExtract(args),
                 "inspect" => DoInspect(args),
+                "index" => DoIndex(args),
+                "search" => DoSearch(args),
                 "listen" => await DoListenAsync(args),
                 "transmit" => await DoTransmitAsync(args),
                 _ => PrintUsage()
@@ -47,8 +49,8 @@ class Program
         Console.WriteLine("  sentinel ingest <src> <dst> <password> [camera-id]");
         Console.WriteLine("  sentinel record <src> <target-dir> <password> [camera-id]");
         Console.WriteLine("  sentinel extract <src> <dst> <password>");
-        Console.WriteLine("  sentinel listen <port> <target-dir> <camera-id>");
-        Console.WriteLine("  sentinel transmit <src> <host> <port> <camera-id>");
+        Console.WriteLine("  sentinel index <dir>");
+        Console.WriteLine("  sentinel search <dir> <query>");
         Console.WriteLine("  sentinel inspect <src>");
         return 1;
     }
@@ -114,25 +116,59 @@ class Program
         if (args.Length < 2) return PrintUsage();
         string srcPath = args[1];
 
-        using var src = File.OpenRead(srcPath);
-        
-        // Manual peek at the Master Header to show Metadata without a key
-        byte[] header = new byte[14];
-        if (src.Read(header) < 14) throw new Exception("Tuncated master header.");
-
-        if (header[0] != 'M' || header[1] != 'S' || header[2] != 'G')
-            throw new Exception("Not a ManagedSecurity archive.");
-
-        ushort metaLen = BinaryPrimitives.ReadUInt16BigEndian(header.AsSpan(12));
-        if (metaLen > 0)
+        var entry = VaultIndexer.TryGetEntry(srcPath);
+        if (entry == null)
         {
-            byte[] meta = new byte[metaLen];
-            src.Read(meta);
-            Console.WriteLine($"[DISCOVERY] Metadata: {Encoding.UTF8.GetString(meta)}");
+            Console.Error.WriteLine("Error: Could not read master header.");
+            return 1;
         }
-        else
+
+        Console.WriteLine($"[DISCOVERY] File: {entry.FileName}");
+        Console.WriteLine($"[DISCOVERY] ChunkSize: {entry.ChunkSize}");
+        Console.WriteLine($"[DISCOVERY] KeyIndex: {entry.KeyIndex}");
+        Console.WriteLine($"[DISCOVERY] Metadata: {entry.Metadata}");
+        Console.WriteLine($"[DISCOVERY] SeekTableOffset: {entry.SeekTableOffset}");
+        
+        foreach (var tag in entry.Tags)
         {
-            Console.WriteLine("[DISCOVERY] No metadata found.");
+            Console.WriteLine($"  Tag: {tag.Key} = {tag.Value}");
+        }
+
+        return 0;
+    }
+
+    static int DoIndex(string[] args)
+    {
+        if (args.Length < 2) return PrintUsage();
+        string dir = args[1];
+
+        Console.WriteLine($"[INDEX] Scanning {dir}...");
+        var entries = VaultIndexer.ScanDirectory(dir).ToList();
+        
+        Console.WriteLine($"[INDEX] Found {entries.Count} ManagedSecurity archives:");
+        foreach (var e in entries)
+        {
+            Console.WriteLine($"- {e.FileName} [{e.Metadata}]");
+        }
+
+        return 0;
+    }
+
+    static int DoSearch(string[] args)
+    {
+        if (args.Length < 3) return PrintUsage();
+        string dir = args[1];
+        string query = args[2];
+
+        Console.WriteLine($"[SEARCH] Hunting for '{query}' in {dir}...");
+        var all = VaultIndexer.ScanDirectory(dir);
+        var results = VaultIndexer.Search(all, query).ToList();
+
+        Console.WriteLine($"[SEARCH] Found {results.Count} matches:");
+        foreach (var r in results)
+        {
+            Console.WriteLine($"- {r.FileName}");
+            Console.WriteLine($"  Metadata: {r.Metadata}");
         }
 
         return 0;
@@ -197,7 +233,7 @@ class Program
             {
                 // Force a frame boundary for video seekability
                 currentStream.FlushToFrame();
-                Console.WriteLine("  [VIDEO] I-Frame detected, flushing cryptographic frame.");
+                Console.WriteLine($"  [VIDEO] I-Frame detected at offset {bytesInFile}, flushing cryptographic frame.");
             }
         }
 
@@ -208,56 +244,136 @@ class Program
 
     static async Task<int> DoListenAsync(string[] args)
     {
-        if (args.Length < 4) return PrintUsage();
+        if (args.Length < 3) return PrintUsage();
         int port = int.Parse(args[1]);
         string targetDir = args[2];
-        string cameraId = args[3];
+        string defaultCameraId = args.Length > 3 ? args[3] : "Unknown_Camera";
 
         if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
 
+        using var cts = new CancellationTokenSource();
+        Console.CancelKeyPress += (s, e) =>
+        {
+            e.Cancel = true;
+            Console.WriteLine("\n[HUB] Shutdown requested...");
+            cts.Cancel();
+        };
+
         var listener = new TcpListener(IPAddress.Any, port);
         listener.Start();
-        Console.WriteLine($"[HUB] Listening on port {port} for Camera {cameraId}...");
+        Console.WriteLine($"[HUB] Listening on port {port}. Press Ctrl+C to stop.");
 
-        while (true)
+        var tasks = new List<Task>();
+
+        try
         {
-            using var client = await listener.AcceptTcpClientAsync();
-            Console.WriteLine($"[HUB] Connection received from {client.Client.RemoteEndPoint}");
+            while (!cts.IsCancellationRequested)
+            {
+                // Accept incoming connections
+                TcpClient client;
+                try
+                {
+                    client = await listener.AcceptTcpClientAsync(cts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
 
+                string clientId = client.Client.RemoteEndPoint?.ToString() ?? Guid.NewGuid().ToString().Substring(0, 8);
+                Log(clientId, "Connection received.");
+
+                // Spawn task for this client
+                var task = HandleClientAsync(client, targetDir, defaultCameraId, cts.Token);
+                tasks.Add(task);
+
+                // Cleanup finished tasks occasionally
+                tasks.RemoveAll(t => t.IsCompleted);
+            }
+        }
+        finally
+        {
+            listener.Stop();
+            Log("SYSTEM", "Waiting for active sessions to close...");
+            await Task.WhenAll(tasks);
+        }
+
+        return 0;
+    }
+
+    static async Task HandleClientAsync(TcpClient client, string targetDir, string defaultCameraId, CancellationToken ct)
+    {
+        string remoteEndPoint = client.Client.RemoteEndPoint?.ToString() ?? "Unknown";
+        using (client)
+        {
             try
             {
                 using var networkStream = client.GetStream();
                 using var shield = new ShieldSession();
-                
-                Console.WriteLine("[HUB] Performing Handshake...");
-                byte[] sessionKey = await shield.PerformHandshakeAsync(networkStream);
-                Console.WriteLine("[HUB] Handshake successful. Session key established.");
 
-                var cipher = new Cipher(new SimpleKeyProvider(sessionKey));
+                // 1. Handshake with Timeout
+                Log(remoteEndPoint, "Performing Handshake...");
+                using var handshakeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, handshakeTimeout.Token);
                 
+                byte[] sessionKey;
+                try
+                {
+                    sessionKey = await shield.PerformHandshakeAsync(networkStream, linkedCts.Token);
+                }
+                catch (OperationCanceledException) when (handshakeTimeout.IsCancellationRequested)
+                {
+                    Log(remoteEndPoint, "Handshake Timed Out.");
+                    return;
+                }
+
+                Log(remoteEndPoint, "Handshake successful.");
+
+                // 2. Initialize Internal Decryption (to verify incoming stream)
+                var cipher = new Cipher(new SimpleKeyProvider(sessionKey));
+                using var cryptoIn = new ManagedSecurityStream(networkStream, cipher, ManagedSecurityStreamMode.Decrypt);
+
+                // Read 0 bytes to force master header processing
+                await cryptoIn.ReadAsync(new byte[1], 0, 0, ct);
+
+                string cameraId = defaultCameraId;
+                if (cryptoIn.Metadata != null)
+                {
+                    string meta = Encoding.UTF8.GetString(cryptoIn.Metadata);
+                    foreach (var part in meta.Split(';'))
+                    {
+                        if (part.StartsWith("CameraID="))
+                        {
+                            cameraId = part.Substring(9).Replace("/", "_").Replace("\\", "_");
+                            break;
+                        }
+                    }
+                }
+
+                Log(remoteEndPoint, $"Session active for camera: {cameraId}");
+
+                // 3. Stream to Rolling Vault using ENCRYPTION mode to create a valid .msg file
                 string fileName = $"Sentinel_{cameraId}_{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss}.msg";
                 string fullPath = Path.Combine(targetDir, fileName);
-                
-                using var fs = File.Create(fullPath);
-                using var crypto = new ManagedSecurityStream(networkStream, cipher, ManagedSecurityStreamMode.Decrypt);
-                
-                // Read decryption metadata (Discovery)
-                // In a real stream, we'd loop until connection close
-                byte[] smallBuffer = new byte[64 * 1024];
-                while (true)
+
+                using (var fs = File.Create(fullPath))
+                using (var cryptoOut = new ManagedSecurityStream(fs, cipher, ManagedSecurityStreamMode.Encrypt, metadata: cryptoIn.Metadata))
                 {
-                    int read = await crypto.ReadAsync(smallBuffer);
-                    if (read == 0) break;
-                    await fs.WriteAsync(smallBuffer.AsMemory(0, read));
+                    await cryptoIn.CopyToAsync(cryptoOut, ct);
                 }
-                
-                Console.WriteLine($"[HUB] Session complete. Archive saved to {fileName}");
+
+                Log(remoteEndPoint, $"Session complete. Saved and verified archive: {fileName}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[HUB] Session error: {ex}");
+                Log(remoteEndPoint, $"Session error: {ex.Message}");
             }
         }
+    }
+
+    static void Log(string client, string message)
+    {
+        Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} [{client}] {message}");
     }
 
     static async Task<int> DoTransmitAsync(string[] args)

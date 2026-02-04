@@ -1,5 +1,6 @@
 # Operator Profile & Project Vision
-**Last Updated:** 2026-02-04 00:15:00 (UTC+02:00)
+**Last Updated:** 2026-02-04 22:07:00 (UTC+02:00)
+
 
 ## 👤 Operator Identity
 The Operator is a specialized software engineer (haha, you flatter me, but I don't think that is true) building high-performance security infrastructure. 
@@ -15,7 +16,8 @@ This project, `ManagedSecurity`, is the cryptographic backbone of that system.
     - **Zero-Allocation**: Use `Span<T>` and `Memory<T>` everywhere.
     - **Custom Binary Protocols**: Prefer bit-packed headers ("Perfect 32") over JSON/Protobuf for speed.
     - **Cross-Platform**: Force Big-Endian for network/storage consistency.
-    - **Media-Awareness**: Align encryption boundaries with media boundaries (H.264 I-Frames/NAL units) to enable high-speed seeking.
+    - **Media-Awareness**: Align encryption boundaries with media boundaries (H.264 I-Frames/NAL units). Implement **Seek Tables** in unencrypted metadata to enable high-speed recovery and jumping.
+- **Dashboard Architecture**: **WASM-First/E2EE**. The Hub acts as a blind relay; decryption happens in the browser via WebAssembly to ensure absolute privacy for camera feeds.
 
 ## 🔐 Cryptographic Pillars
 1. **S=00 (Standard)**: AES-256-GCM.

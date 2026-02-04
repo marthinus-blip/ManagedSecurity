@@ -39,9 +39,23 @@ This file tracks major design decisions, security hardening, and architectural s
 - **Size Calculation**: Exposed `Cipher.GetRequiredSize` to help consumers allocate exact buffers for the zero-allocation API.
 
 ---
-## 2026-02-04 00:15:00 (UTC+02:00): ShieldSession & Live Network Ingest
+## 2026-02-04 20:55:00 (UTC+02:00): Media-Aware Seek Tables & Header v2
 
-- **ShieldSession (X25519)**: Implemented ephemeral ECDH handshake for dynamic session keys.
-- **Network Ingest**: Built `sentinel listen` and `sentinel transmit` to enable live camera-to-hub security.
-- **Bug Fix**: Resolved `ArgumentOutOfRangeException` in `ManagedSecurityStream` caused by double-offset calculation in the Decrypt path.
-- **Zero-Alloc Handshake**: The handshake protocol remains focused on minimal heap impact and NativeAOT compatibility.
+- **Master Header Expansion**: Upgraded the `MasterHeader` to **v2 (22 bytes)**, adding a 64-bit `SeekTableOffset` field. This allows the discovery layer to skip directly to the end of a file to read global metadata/indices without parsing the entire blob.
+- **SeekTable Implementation**: Created a compact binary format for frame-to-timestamp mapping (`[4B TS][8B Offset]`).
+- **ManagedSecurityStream (Auto-Indexing)**: Updated the encryptor to automatically record offset points every time `FlushToFrame()` is called. On stream closure, it performs a non-destructive header update by seeking back to the start—ensuring even multi-gigabyte archives are instantly jumpable.
+- **Verification**: Confirmed successful seek-table generation in `sentinel record` simulations, providing the necessary hooks for the upcoming WASM dashboard.
+
+---
+## 2026-02-04 22:05:00 (UTC+02:00): Sentinel Dashboard & Browser-Side E2EE
+
+- **Blazor WASM Foundation**: Initialized `SentinelDashboard` using Blazor WebAssembly to maintain 100% code reuse with the `ManagedSecurity.Core` and `Common` projects.
+- **E2EE Telemetry Engine**: 
+    - Instrumented `ManagedSecurityStream` with native telemetry (Latency, Throughput, FrameCount).
+    - Verified real-time decryption in the browser with `0 B` allocations on the hot path.
+- **Structural Integrity**:
+    - Centralized external project references into `Assembly.Targets` to resolve the "Dotnet repo as a sibling" dependency.
+    - Implemented `InitialTargets` validation in MSBuild to provide clear error messages if the security core projects are missing.
+- **Bug Fix (Stream Corruption)**: Fixed a critical off-by-one error in `ManagedSecurityStream.Write` where inconsistent header-offset calculations were corrupting the first few bytes of encrypted frames during high-concurrency writes.
+- **API Hardening**: Added `leaveOpen` support to `ManagedSecurityStream` to allow non-destructive post-processing of underlying streams (e.g., updating Seek Tables in headers after the payload is written).
+

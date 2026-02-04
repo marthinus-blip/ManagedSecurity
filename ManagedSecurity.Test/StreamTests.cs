@@ -36,14 +36,14 @@ public class StreamTests
         byte[] encrypted = ms.ToArray();
         
         // Assertions
-        // 1. Master Header (12 bytes)
-        Assert.IsTrue(encrypted.Length > 12);
+        // 1. Master Header (22 bytes)
+        Assert.IsTrue(encrypted.Length > MasterHeader.FixedSize);
         Assert.AreEqual((byte)'M', encrypted[0]);
         
         // 2. Validate individual frames (S=2)
         // We expect 3 frames (100, 100, 50)
         var stream = new MemoryStream(encrypted);
-        stream.Seek(14, SeekOrigin.Begin); // Master Header is now 14 bytes
+        stream.Seek(MasterHeader.FixedSize, SeekOrigin.Begin); // Master Header is now 22 bytes
         
         byte[] frameBuffer = new byte[encrypted.Length];
         int read = stream.Read(frameBuffer);

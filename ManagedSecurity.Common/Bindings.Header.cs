@@ -14,6 +14,7 @@ public partial class Bindings {
         public int MacLength { get; }
         public int PayloadLength { get; }
         public int KeyIndex { get; }
+        public int SequenceLength { get; }
         
         // Calculated offsets
         public int IvOffset { get; }
@@ -58,6 +59,13 @@ public partial class Bindings {
                 IvLength = 16;
                 MacLength = 32;
             }
+            else if (s == 2)
+            {
+                // S=2: Streaming/Sequenced Mode
+                IvLength = 12;
+                MacLength = 16;
+                SequenceLength = 8;
+            }
             else
             {
                 throw new NotSupportedException($"Switch value S={s} is not supported.");
@@ -84,8 +92,9 @@ public partial class Bindings {
             KeyIndex = DecodeVariableLength12(kiRaw, data, ref currentOffset);
 
             // Calculate Offsets
-            // Layout: [FixedHeader+Ext] [IV] [MAC] [Payload]
-            IvOffset = currentOffset;
+            // Layout: [FixedHeader+Ext] [Seq? (8B)] [IV] [MAC] [Payload]
+            int seqOffset = currentOffset;
+            IvOffset = seqOffset + SequenceLength;
             MacOffset = IvOffset + IvLength;
             PayloadOffset = MacOffset + MacLength;
             
@@ -163,10 +172,12 @@ public partial class Bindings {
             return value;
         }
 
+        public readonly ReadOnlySpan<byte> GetSequence(ReadOnlySpan<byte> message) => SequenceLength > 0 ? message.Slice(IvOffset - SequenceLength, SequenceLength) : default;
         public readonly ReadOnlySpan<byte> GetIv(ReadOnlySpan<byte> message) => message.Slice(IvOffset, IvLength);
         public readonly ReadOnlySpan<byte> GetMac(ReadOnlySpan<byte> message) => message.Slice(MacOffset, MacLength);
         public readonly ReadOnlySpan<byte> GetPayload(ReadOnlySpan<byte> message) => message.Slice(PayloadOffset, PayloadLength);
 
+        public readonly Span<byte> GetSequence(Span<byte> message) => SequenceLength > 0 ? message.Slice(IvOffset - SequenceLength, SequenceLength) : default;
         public readonly Span<byte> GetIv(Span<byte> message) => message.Slice(IvOffset, IvLength);
         public readonly Span<byte> GetMac(Span<byte> message) => message.Slice(MacOffset, MacLength);
         public readonly Span<byte> GetPayload(Span<byte> message) => message.Slice(PayloadOffset, PayloadLength);
@@ -178,36 +189,40 @@ public partial class Bindings {
         /// <summary>
         /// Calculates the total size in bytes required for a message with the given parameters and empty extensions.
         /// </summary>
-        public static int GetRequiredSize(int payloadLength, int keyIndex, bool highSecurityMode)
+        public static int GetRequiredSize(int payloadLength, int keyIndex, int profile)
         {
             int baseSize = FixedHeaderSize;
             
-            // Add extensions size for P
             baseSize += GetExtensionCount(payloadLength);
-            // Add extensions size for KI
             baseSize += GetExtensionCount(keyIndex);
 
-            int ivLen = highSecurityMode ? 16 : 12;
-            int macLen = highSecurityMode ? 32 : 16;
+            int ivLen = 12;
+            int macLen = 16;
+            int seqLen = 0;
+
+            if (profile == 1)
+            {
+                ivLen = 16;
+                macLen = 32;
+            }
+            else if (profile == 2)
+            {
+                seqLen = 8;
+            }
             
-            // Format: Header+Ext + IV + MAC + Payload
-            return baseSize + ivLen + macLen + payloadLength;
+            return baseSize + seqLen + ivLen + macLen + payloadLength;
         }
 
-        public static void Write(Span<byte> destination, int payloadLength, int keyIndex, bool highSecurityMode)
+        public static void Write(Span<byte> destination, int payloadLength, int keyIndex, int profile)
         {
-            if (destination.Length < GetRequiredSize(payloadLength, keyIndex, highSecurityMode))
+            if (destination.Length < GetRequiredSize(payloadLength, keyIndex, profile))
                 throw new ArgumentException("Destination buffer too small.");
 
             uint h = 0;
-            // Magic (111)
-            h |= (7u << 29);
-            // Version (0)
-            h |= (0u << 27);
-            // Switch
-            h |= ((highSecurityMode ? 1u : 0u) << 25);
-            // Reserved (0)
-            h |= (0u << 24);
+            h |= (7u << 29); // Magic
+            h |= (0u << 27); // Version
+            h |= (((uint)profile & 0x03) << 25); // Switch (S)
+            h |= (0u << 24); // Reserved
 
             int currentOffset = FixedHeaderSize;
 

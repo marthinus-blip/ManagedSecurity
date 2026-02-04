@@ -1,5 +1,6 @@
 using System;
 using System.Security.Cryptography;
+using System.Buffers.Binary;
 using ManagedSecurity.Common;
 
 namespace ManagedSecurity.Core
@@ -13,9 +14,14 @@ namespace ManagedSecurity.Core
             _keyProvider = keyProvider ?? throw new ArgumentNullException(nameof(keyProvider));
         }
 
+        public int GetRequiredSize(int plaintextLength, int keyIndex, int profile)
+        {
+             return Bindings.Header.GetRequiredSize(plaintextLength, keyIndex, profile);
+        }
+
         public int GetRequiredSize(int plaintextLength, int keyIndex, bool highSecurity = false)
         {
-             return Bindings.Header.GetRequiredSize(plaintextLength, keyIndex, highSecurity);
+             return GetRequiredSize(plaintextLength, keyIndex, highSecurity ? 1 : 0);
         }
 
         public byte[] Encrypt(ReadOnlySpan<byte> plaintext, int keyIndex, bool highSecurity = false)
@@ -27,8 +33,15 @@ namespace ManagedSecurity.Core
 
         public void Encrypt(ReadOnlySpan<byte> plaintext, Span<byte> destination, int keyIndex, bool highSecurity = false)
         {
-            if (highSecurity)
+             Encrypt(plaintext, destination, keyIndex, highSecurity ? 1 : 0);
+        }
+
+        public void Encrypt(ReadOnlySpan<byte> plaintext, Span<byte> destination, int keyIndex, int profile, ulong sequenceNumber = 0)
+        {
+            if (profile == 1)
                 EncryptS1(plaintext, destination, keyIndex);
+            else if (profile == 2)
+                EncryptS2(plaintext, destination, keyIndex, sequenceNumber);
             else
                 EncryptS0(plaintext, destination, keyIndex);
         }
@@ -38,7 +51,7 @@ namespace ManagedSecurity.Core
             var key = _keyProvider.GetKey(keyIndex);
             const int MacLength = 16;
             
-            Bindings.Header.Write(destination, plaintext.Length, keyIndex, false);
+            Bindings.Header.Write(destination, plaintext.Length, keyIndex, 0);
             var h = new Bindings.Header(destination);
             
             RandomNumberGenerator.Fill(destination.Slice(h.IvOffset, h.IvLength));
@@ -58,7 +71,7 @@ namespace ManagedSecurity.Core
             // S=1: AES-GCM-SIV (Synthetic IV via HMAC-SHA256)
             var masterKey = _keyProvider.GetKey(keyIndex);
             
-            Bindings.Header.Write(destination, plaintext.Length, keyIndex, true);
+            Bindings.Header.Write(destination, plaintext.Length, keyIndex, 1);
             var h = new Bindings.Header(destination);
             
             // 1. Generate Input Nonce (16 bytes)
@@ -99,6 +112,38 @@ namespace ManagedSecurity.Core
             hmacFull.Slice(0, 16).CopyTo(tagDst.Slice(16, 16));
         }
 
+        private void EncryptS2(ReadOnlySpan<byte> plaintext, Span<byte> destination, int keyIndex, ulong sequenceNumber)
+        {
+            // S=2: Streaming Mode (AES-GCM + Sequence Number in AAD)
+            var key = _keyProvider.GetKey(keyIndex);
+            const int MacLength = 16;
+            
+            Bindings.Header.Write(destination, plaintext.Length, keyIndex, 2);
+            var h = new Bindings.Header(destination);
+
+            // 1. Write Sequence Number
+            var seqDst = h.GetSequence(destination);
+            BinaryPrimitives.WriteUInt64BigEndian(seqDst, sequenceNumber);
+            
+            // 2. Generate IV (12 bytes)
+            RandomNumberGenerator.Fill(h.GetIv(destination));
+
+            using var aes = new AesGcm(key.Span, MacLength);
+            
+            var nonce = h.GetIv(destination);
+            var ciphertextDst = h.GetPayload(destination);
+            var tagDst = h.GetMac(destination);
+            
+            // 3. AAD = [Header+Extensions] + [SequenceNumber]
+            // We use a small stack buffer to combine them for the AesGcm call.
+            int headerPartLen = h.IvOffset - h.SequenceLength;
+            Span<byte> aad = stackalloc byte[headerPartLen + 8];
+            destination.Slice(0, headerPartLen).CopyTo(aad);
+            seqDst.CopyTo(aad.Slice(headerPartLen));
+
+            aes.Encrypt(nonce, plaintext, ciphertextDst, tagDst, aad);
+        }
+
         public byte[] Decrypt(ReadOnlySpan<byte> message)
         {
             var h = new Bindings.Header(message);
@@ -111,7 +156,7 @@ namespace ManagedSecurity.Core
         {
             var h = new Bindings.Header(message);
             
-            if (h.IvLength == 12 && h.MacLength == 16)
+            if (h.IvLength == 12 && h.MacLength == 16 && h.SequenceLength == 0)
             {
                 DecryptS0(h, message, destination);
             }
@@ -119,9 +164,13 @@ namespace ManagedSecurity.Core
             {
                 DecryptS1(h, message, destination);
             }
+            else if (h.IvLength == 12 && h.MacLength == 16 && h.SequenceLength == 8)
+            {
+                DecryptS2(h, message, destination);
+            }
             else
             {
-                throw new NotSupportedException($"Unsupported header profile: IV={h.IvLength}, MAC={h.MacLength}");
+                throw new NotSupportedException($"Unsupported header profile: IV={h.IvLength}, MAC={h.MacLength}, Seq={h.SequenceLength}");
             }
         }
 
@@ -135,7 +184,7 @@ namespace ManagedSecurity.Core
             var tag = h.GetMac(message);
             var associatedData = message.Slice(0, h.IvOffset);
 
-            aes.Decrypt(nonce, ciphertext, tag, destination, associatedData);
+            aes.Decrypt(nonce, ciphertext, tag, destination.Slice(0, h.PayloadLength), associatedData);
         }
 
         private void DecryptS1(Bindings.Header h, ReadOnlySpan<byte> message, Span<byte> destination)
@@ -165,7 +214,8 @@ namespace ManagedSecurity.Core
             using var aes = new AesGcm(encKey, 16);
             
             // 4. Decrypt and validate GCM Tag
-            aes.Decrypt(iv, ciphertext, gcmTag, destination, associatedData);
+            var plaintextDst = destination.Slice(0, h.PayloadLength);
+            aes.Decrypt(iv, ciphertext, gcmTag, plaintextDst, associatedData);
 
             // 5. Validate HMAC (Second layer of protection)
             Span<byte> hmacComputed = stackalloc byte[32];
@@ -179,6 +229,24 @@ namespace ManagedSecurity.Core
                 CryptographicOperations.ZeroMemory(destination);
                 throw new CryptographicException("SIV HMAC Authentication failed.");
             }
+        }
+
+        private void DecryptS2(Bindings.Header h, ReadOnlySpan<byte> message, Span<byte> destination)
+        {
+            var key = _keyProvider.GetKey(h.KeyIndex);
+            using var aes = new AesGcm(key.Span, h.MacLength);
+
+            var seq = h.GetSequence(message);
+            var nonce = h.GetIv(message);
+            var ciphertext = h.GetPayload(message);
+            var tag = h.GetMac(message);
+            
+            int headerPartLen = h.IvOffset - h.SequenceLength;
+            Span<byte> aad = stackalloc byte[headerPartLen + 8];
+            message.Slice(0, headerPartLen).CopyTo(aad);
+            seq.CopyTo(aad.Slice(headerPartLen));
+
+            aes.Decrypt(nonce, ciphertext, tag, destination.Slice(0, h.PayloadLength), aad);
         }
         
         // Overload to avoid copy if caller has Memory

@@ -38,7 +38,7 @@ public class CipherBenchmarks
         _ciphertext = new byte[PayloadSize];
         
         // Pre-allocate packet for ManagedSecurity Zero-Alloc test
-        _packetBuffer = new byte[_cipher.GetRequiredSize(PayloadSize, 0)];
+        _packetBuffer = new byte[_cipher.GetRequiredSize(PayloadSize, 0, 0)];
         
         // Pre-allocate for decryption test
         _encryptedManaged = _cipher.Encrypt(_plaintext, 0);
@@ -85,12 +85,12 @@ public class HeaderBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        _headerData = new byte[Bindings.Header.GetRequiredSize(100, 1, false)];
-        Bindings.Header.Write(_headerData, 100, 1, false);
+        _headerData = new byte[Bindings.Header.GetRequiredSize(100, 1, 0)];
+        Bindings.Header.Write(_headerData, 100, 1, 0);
 
         // 1MB payload triggers 1-byte extension for L
-        _extendedHeaderData = new byte[Bindings.Header.GetRequiredSize(1024 * 1024, 1, false)];
-        Bindings.Header.Write(_extendedHeaderData, 1024 * 1024, 1, false);
+        _extendedHeaderData = new byte[Bindings.Header.GetRequiredSize(1024 * 1024, 1, 0)];
+        Bindings.Header.Write(_extendedHeaderData, 1024 * 1024, 1, 0);
     }
 
     [Benchmark(Baseline = true, Description = "Header Parse (Standard)")]

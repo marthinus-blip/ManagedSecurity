@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedSecurity.Fuzz", "Man
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedSecurity.Benchmarks", "ManagedSecurity.Benchmarks\ManagedSecurity.Benchmarks.csproj", "{8FF5BBE3-DCAE-4C4D-A367-02AB1C66606F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedSecurity.Sentinel", "ManagedSecurity.Sentinel\ManagedSecurity.Sentinel.csproj", "{69F61992-B33B-49FC-8C33-A285EE907DF2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +46,10 @@ Global
 		{8FF5BBE3-DCAE-4C4D-A367-02AB1C66606F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8FF5BBE3-DCAE-4C4D-A367-02AB1C66606F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8FF5BBE3-DCAE-4C4D-A367-02AB1C66606F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69F61992-B33B-49FC-8C33-A285EE907DF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69F61992-B33B-49FC-8C33-A285EE907DF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69F61992-B33B-49FC-8C33-A285EE907DF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69F61992-B33B-49FC-8C33-A285EE907DF2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

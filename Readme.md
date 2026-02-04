@@ -29,8 +29,9 @@ Core binary protocol implementation featuring the "Perfect 32" header format.
 ```
 
 **Security Profiles (Switch Bit):**
-- `S=00`: AES-GCM Mode (96-bit IV, 128-bit MAC) - Optimized for standard use
-- `S=01`: High-Security Mode (128-bit IV, 256-bit MAC) - Reserved for future algorithms
+- `S=00`: **Standard Mode** (AES-GCM, 12B IV, 16B MAC) - Optimized for high-throughput packets.
+- `S=01`: **High-Security Mode** (AES-GCM-SIV, 16B IV, 32B MAC) - Nonce-misuse resistant, dual-layer authentication (GCM+HMAC).
+- `S=02`: **Streaming Mode** (Sequenced AES-GCM, 8B Seq, 12B IV, 16B MAC) - Anti-replay protection for continuous data streams.
 
 **Variable-Length Encoding:**
 - Payloads up to **2047 bytes**: No extension bytes required
@@ -39,25 +40,26 @@ Core binary protocol implementation featuring the "Perfect 32" header format.
 - Key indices follow the same extensible pattern
 
 **Message Structure:**
-```
-[Header (4B)] + [Extensions (0-N)] + [IV (12/16B)] + [MAC (16/32B)] + [Payload (L)]
-```
+- **S=00/01**: `[Header (4B)] + [Extensions (0-N)] + [IV (12/16B)] + [MAC (16/32B)] + [Payload (L)]`
+- **S=02**: `[Header (4B)] + [Extensions (0-N)] + [Seq# (8B)] + [IV (12B)] + [MAC (16B)] + [Payload (L)]`
 
 ### ManagedSecurity.Core
 Cryptographic engine implementing AES-GCM with header-authenticated encryption.
 
 **Features:**
 - `IKeyProvider` abstraction for flexible key management
-- `Cipher` class with `Encrypt()` / `Decrypt()` operations
-- Associated Authenticated Data (AAD) protection for headers
+- `Cipher` class with `Encrypt()` / `Decrypt()` operations (Supports S=0, S=1, S=2)
+- `ManagedSecurityStream` for secure file/network streaming with anti-replay protection
+- Associated Authenticated Data (AAD) protection for headers and sequence numbers
 - Automatic IV generation using cryptographically secure RNG
 
 ### ManagedSecurity.Test
 Comprehensive test suite with NativeAOT validation.
 
 **Test Coverage:**
-- Header parsing and serialization (9 tests)
-- Cipher round-trip encryption/decryption (2 tests)
+- Header parsing and serialization (10 tests)
+- Cipher round-trip encryption/decryption (S=0, S=1)
+- Stream sequencing and replay protection (S=2)
 - Tamper detection and authentication verification
 - Data protection API integration
 
@@ -187,8 +189,8 @@ The project uses `MSTest.Sdk` with `Microsoft.Testing.Platform` for NativeAOT-co
 
 # Expected output:
 # Test run summary: Passed!
-#   total: 11
-#   succeeded: 11
+#   total: 14
+#   succeeded: 14
 ```
 
 ## 📝 License

@@ -150,12 +150,12 @@ namespace ManagedSecurity.Test
         {
             int payloadLen = 2000;
             int keyIndex = 5;
-            bool highSec = false; // S=0
+            int profile = 0; // S=0
 
-            int required = Bindings.Header.GetRequiredSize(payloadLen, keyIndex, highSec);
+            int required = Bindings.Header.GetRequiredSize(payloadLen, keyIndex, profile);
             byte[] buffer = new byte[required];
 
-            Bindings.Header.Write(buffer, payloadLen, keyIndex, highSec);
+            Bindings.Header.Write(buffer, payloadLen, keyIndex, profile);
 
             // Read back
             var h = new Bindings.Header(buffer);
@@ -172,12 +172,12 @@ namespace ManagedSecurity.Test
             // Value that needs 1 extension byte (>= 2048)
             int payloadLen = 5000; 
             int keyIndex = 0;
-            bool highSec = true; // S=1
+            int profile = 1; // S=1
 
-            int required = Bindings.Header.GetRequiredSize(payloadLen, keyIndex, highSec);
+            int required = Bindings.Header.GetRequiredSize(payloadLen, keyIndex, profile);
             byte[] buffer = new byte[required];
 
-            Bindings.Header.Write(buffer, payloadLen, keyIndex, highSec);
+            Bindings.Header.Write(buffer, payloadLen, keyIndex, profile);
 
             // Read back
             var h = new Bindings.Header(buffer);

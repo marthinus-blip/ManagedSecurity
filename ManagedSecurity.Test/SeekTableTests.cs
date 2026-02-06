@@ -60,11 +60,21 @@ public class SeekTableTests
         Assert.IsTrue(points[1].FileOffset > points[0].FileOffset, "Offset 2 > Offset 1");
         Assert.IsTrue(points[2].FileOffset > points[1].FileOffset, "Offset 3 > Offset 2");
 
+        Assert.AreEqual(1u, points[1].FrameIndex, "Frame index for second point should be 1");
+
         // 5. Verify Random Access Playback (Jump to Frame 2)
         using var readerMs = new MemoryStream(finalData);
         readerMs.Position = (long)points[1].FileOffset;
         
-        using var cryptoIn = new ManagedSecurityStream(readerMs, cipher, ManagedSecurityStreamMode.Decrypt);
+        using var cryptoIn = new ManagedSecurityStream(
+            readerMs, 
+            cipher, 
+            ManagedSecurityStreamMode.Decrypt, 
+            chunkSize: masterHeader.ChunkSize, 
+            keyIndex: masterHeader.KeyIndex, 
+            skipMasterHeader: true, 
+            initialSequence: points[1].FrameIndex,
+            seekTableOffset: masterHeader.SeekTableOffset);
         
         // Note: When we jump into the middle of a stream, we MUST align with a frame.
         // Our protocol allows decrypting any frame as long as we know the sequence number (or use the header sequence).

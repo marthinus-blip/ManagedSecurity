@@ -15,10 +15,13 @@
 
     <!-- Static linking for zlib to ensure portability (Linux only) -->
     <LinkerArgs Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(LinkerArgs) -Wl,-Bstatic -lz -Wl,-Bdynamic</LinkerArgs>
+    <NoWarn>$(NoWarn);NU1603</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="8.0.8" />
+    <PackageReference Include="Microsoft.Testing.Platform" Version="1.5.0" />
+    <PackageReference Include="Microsoft.Testing.Extensions.TrxReport.Abstractions" Version="1.5.0" />
   </ItemGroup>
 
   <!-- Conditional platform-specific packages -->

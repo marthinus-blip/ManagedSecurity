@@ -5,9 +5,21 @@ using ManagedSecurity.Common;
 
 namespace ManagedSecurity.Core
 {
+    public interface IAsyncDecryptor
+    {
+        Task DecryptS2Async(Bindings.Header h, ReadOnlyMemory<byte> message, Memory<byte> destination, ReadOnlyMemory<byte> key);
+    }
+
+    public interface IAsyncEncryptor
+    {
+        Task EncryptS2Async(ReadOnlyMemory<byte> plaintext, Memory<byte> destination, int keyIndex, ulong sequenceNumber, ReadOnlyMemory<byte> key);
+    }
+
     public class Cipher
     {
         private readonly IKeyProvider _keyProvider;
+        public IAsyncDecryptor? AsyncDecryptor { get; set; }
+        public IAsyncEncryptor? AsyncEncryptor { get; set; }
 
         public Cipher(IKeyProvider keyProvider)
         {
@@ -23,6 +35,8 @@ namespace ManagedSecurity.Core
         {
              return GetRequiredSize(plaintextLength, keyIndex, highSecurity ? 1 : 0);
         }
+
+        public ReadOnlyMemory<byte> GetKey(int keyIndex) => _keyProvider.GetKey(keyIndex);
 
         public byte[] Encrypt(ReadOnlySpan<byte> plaintext, int keyIndex, bool highSecurity = false)
         {

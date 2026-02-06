@@ -104,9 +104,6 @@ public partial class Bindings {
                 throw new ArgumentException("Total message length exceeds supported limits.");
             
             TotalLength = (int)total;
-
-            if (data.Length < TotalLength)
-                throw new ArgumentException($"Data length {data.Length} is less than required {TotalLength}");
         }
 
         // Variable Length Decoder for 12-bit Base Fields

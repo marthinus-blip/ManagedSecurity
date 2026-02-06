@@ -141,14 +141,29 @@ class Program
     {
         if (args.Length < 2) return PrintUsage();
         string dir = args[1];
+        string? outputPath = args.Length > 2 ? args[2] : null;
 
         Console.WriteLine($"[INDEX] Scanning {dir}...");
         var entries = VaultIndexer.ScanDirectory(dir).ToList();
         
-        Console.WriteLine($"[INDEX] Found {entries.Count} ManagedSecurity archives:");
-        foreach (var e in entries)
+        if (string.IsNullOrEmpty(outputPath))
         {
-            Console.WriteLine($"- {e.FileName} [{e.Metadata}]");
+            Console.WriteLine($"[INDEX] Found {entries.Count} ManagedSecurity archives:");
+            foreach (var e in entries)
+            {
+                Console.WriteLine($"- {e.FileName} [{e.Metadata}]");
+            }
+        }
+        else
+        {
+            var options = new System.Text.Json.JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                TypeInfoResolver = SentinelJsonContext.Default
+            };
+            string json = System.Text.Json.JsonSerializer.Serialize(entries, options);
+            File.WriteAllText(outputPath, json);
+            Console.WriteLine($"[INDEX] Exported {entries.Count} entries to {outputPath}");
         }
 
         return 0;
@@ -425,3 +440,6 @@ class Program
         public ReadOnlyMemory<byte> GetKey(int keyIndex) => _key;
     }
 }
+
+[System.Text.Json.Serialization.JsonSerializable(typeof(List<VaultEntry>))]
+internal partial class SentinelJsonContext : System.Text.Json.Serialization.JsonSerializerContext { }

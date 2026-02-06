@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace ManagedSecurity.Common;
 
-public readonly record struct SeekPoint(uint RelativeTimestampMs, ulong FileOffset);
+public readonly record struct SeekPoint(uint RelativeTimestampMs, ulong FileOffset, uint FrameIndex);
 
 public static class SeekTableSerializer
 {
@@ -13,7 +13,8 @@ public static class SeekTableSerializer
     public static byte[] Serialize(IEnumerable<SeekPoint> points)
     {
         var list = points is List<SeekPoint> l ? l : new List<SeekPoint>(points);
-        byte[] data = new byte[6 + (list.Count * 12)];
+        // 6 byte header + 16 bytes per point (4 TS + 8 Offset + 4 FrameIndex)
+        byte[] data = new byte[6 + (list.Count * 16)];
         
         Magic.CopyTo(data);
         BinaryPrimitives.WriteUInt16BigEndian(data.AsSpan(4), (ushort)list.Count);
@@ -23,7 +24,8 @@ public static class SeekTableSerializer
         {
             BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(offset), p.RelativeTimestampMs);
             BinaryPrimitives.WriteUInt64BigEndian(data.AsSpan(offset + 4), p.FileOffset);
-            offset += 12;
+            BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(offset + 12), p.FrameIndex);
+            offset += 16;
         }
         
         return data;
@@ -40,12 +42,13 @@ public static class SeekTableSerializer
         int offset = 6;
         for (int i = 0; i < count; i++)
         {
-            if (offset + 12 > data.Length) break;
+            if (offset + 16 > data.Length) break;
             
             uint ts = BinaryPrimitives.ReadUInt32BigEndian(data.Slice(offset));
             ulong fo = BinaryPrimitives.ReadUInt64BigEndian(data.Slice(offset + 4));
-            points.Add(new SeekPoint(ts, fo));
-            offset += 12;
+            uint fi = BinaryPrimitives.ReadUInt32BigEndian(data.Slice(offset + 12));
+            points.Add(new SeekPoint(ts, fo, fi));
+            offset += 16;
         }
         
         return points;

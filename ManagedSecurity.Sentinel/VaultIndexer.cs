@@ -6,17 +6,6 @@ using ManagedSecurity.Common;
 
 namespace ManagedSecurity.Sentinel;
 
-public class VaultEntry
-{
-    public string FileName { get; set; } = string.Empty;
-    public string FullPath { get; set; } = string.Empty;
-    public int ChunkSize { get; set; }
-    public int KeyIndex { get; set; }
-    public ulong SeekTableOffset { get; set; }
-    public string Metadata { get; set; } = string.Empty;
-    public Dictionary<string, string> Tags { get; set; } = new();
-}
-
 public static class VaultIndexer
 {
     public static IEnumerable<VaultEntry> ScanDirectory(string path)

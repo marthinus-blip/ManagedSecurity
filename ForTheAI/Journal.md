@@ -110,6 +110,20 @@ To run the Sentinel Dashboard with full hardware acceleration:
     - **E2EE Handshake**: Latency measured at `< 2ms` for initial key derivation and header parsing.
 
 ### 🛡️ Current Environment State
-- **Sentinel Dashboard**: Running via `dotnet watch` on `http://localhost:5186`.
-- **Media Archives**: Encrypted `.bin` files and `vault.json` database are actively served from `wwwroot/`.
+- **Sentinel Dashboard**: Running via `dotnet watch` on `http://localhost:5000`.
+- **Media Archives**: Encrypted `.msg` files and `vault.json` database are actively served from `wwwroot/`.
 - **System Health**: 0 Build Warnings / 0 Runtime Errors.
+
+---
+
+## 2026-02-09 21:15:00 (UTC+02:00): Bit-Perfect Media Seeking & Hardware-Accelerated WASM
+
+### 🏗️ Architectural Hardening
+- **NAL-Aware Stream Alignment**: Implemented `NalUnitScanner` to identify H.264 Start Codes and Sync Points (IDR/SPS/PPS). The `ManagedSecurityStream` now surgically flushes cryptographic frames at these media boundaries.
+- **Hardware-Accelerated Decryption**: Swapped the managed C# cryptographic kernel in the Dashboard for the browser's native **Web Crypto API (AES-GCM)**. This moves the heavy lifting to the browser's hardware-accelerated drivers.
+- **Zero-Copy Interop**: Refactored the JS interop layer to use direct memory slicing (`subarray`) instead of cloning buffers, reducing GC pressure during 1080p playback.
+- **Live Indexing**: Updated the `sentinel index` command to support relative pathing and lazy-load seek point discovery via HTTP Range headers.
+
+### 🎯 Results
+- Re-indexed the `sample_video.mp4` with the new NAL-aware ingestor. The vault now contains bit-perfect jump points for every I-frame, allowing "Instant Seek" in the Command Center UI.
+- Reduced video playback latency significantly by caching SubtleCrypto keys in JS.

@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\SharedFile.targets" />
+  
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>Latest</LangVersion>
+    <IsAotCompatible>true</IsAotCompatible>
+    <Description>Orchestration, health monitoring, and distributed task allocation for Sentinel.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ManagedSecurity.Common\ManagedSecurity.Common.csproj" />
+    <ProjectReference Include="..\ManagedSecurity.Discovery\ManagedSecurity.Discovery.csproj" />
+  </ItemGroup>
+
+</Project>

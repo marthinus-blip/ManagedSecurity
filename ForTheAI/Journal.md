@@ -130,3 +130,5 @@ To run the Sentinel Dashboard with full hardware acceleration:
 - Reduced video playback latency significantly by caching SubtleCrypto keys in JS.
 - **RTSP Scan Integration**: The `sentinel scan <subnet>` command is now functional, sweeping for open ports (554, 8554, etc.) and probing well-known paths (Hikvision, Dahua, Axis, etc.).
 - **Build Infrastructure**: Resolved `NU1605` package downgrade errors in `ManagedSecurity.Test` by aligning MSTest runner dependencies with version `1.5.2`. All 16 unit tests are passing once again.
+- **Strategic Blueprint**: Finalized the architecture for **Distributed Computer Vision**. Defined the "Guardian" (Broad) and "Inquisitor" (Narrow) split-phase inference model and the "General & Scouts" orchestration topology.
+- **Orchestration Core (C2)**: Initialized the `ManagedSecurity.Orchestration` project. Implemented a composition-based `SentinelAgent` with **Lease-based Task Allocation** and **Heartbeat monitoring**. Verified the system's resilience (automatic task salvaging for MIA nodes) via a new suite of 21 unit tests.

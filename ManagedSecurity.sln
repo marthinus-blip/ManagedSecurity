@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedSecurity.Sentinel", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedSecurity.Discovery", "ManagedSecurity.Discovery\ManagedSecurity.Discovery.csproj", "{6914F89F-9145-4345-9C5F-992249EC1FD4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedSecurity.Orchestration", "ManagedSecurity.Orchestration\ManagedSecurity.Orchestration.csproj", "{8A492453-CD1F-4869-8FFB-B50CF16220EF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -56,6 +58,10 @@ Global
 		{6914F89F-9145-4345-9C5F-992249EC1FD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6914F89F-9145-4345-9C5F-992249EC1FD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6914F89F-9145-4345-9C5F-992249EC1FD4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A492453-CD1F-4869-8FFB-B50CF16220EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A492453-CD1F-4869-8FFB-B50CF16220EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A492453-CD1F-4869-8FFB-B50CF16220EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A492453-CD1F-4869-8FFB-B50CF16220EF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

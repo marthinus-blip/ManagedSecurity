@@ -3,7 +3,9 @@
   <ItemGroup>
     <ProjectReference Include="..\ManagedSecurity.Core\ManagedSecurity.Core.csproj" />
     <ProjectReference Include="..\ManagedSecurity.Common\ManagedSecurity.Common.csproj" />
+    <ProjectReference Include="..\ManagedSecurity.Discovery\ManagedSecurity.Discovery.csproj" />
   </ItemGroup>
+
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>

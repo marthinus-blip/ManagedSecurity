@@ -123,7 +123,10 @@ To run the Sentinel Dashboard with full hardware acceleration:
 - **Hardware-Accelerated Decryption**: Swapped the managed C# cryptographic kernel in the Dashboard for the browser's native **Web Crypto API (AES-GCM)**. This moves the heavy lifting to the browser's hardware-accelerated drivers.
 - **Zero-Copy Interop**: Refactored the JS interop layer to use direct memory slicing (`subarray`) instead of cloning buffers, reducing GC pressure during 1080p playback.
 - **Live Indexing**: Updated the `sentinel index` command to support relative pathing and lazy-load seek point discovery via HTTP Range headers.
+- **RTSP Subnet Discovery**: Initialized the `ManagedSecurity.Discovery` project. This adds high-speed parallel port scanning and RTSP path probing to the ecosystem, allowing the CLI to find cameras automatically.
 
 ### 🎯 Results
 - Re-indexed the `sample_video.mp4` with the new NAL-aware ingestor. The vault now contains bit-perfect jump points for every I-frame, allowing "Instant Seek" in the Command Center UI.
 - Reduced video playback latency significantly by caching SubtleCrypto keys in JS.
+- **RTSP Scan Integration**: The `sentinel scan <subnet>` command is now functional, sweeping for open ports (554, 8554, etc.) and probing well-known paths (Hikvision, Dahua, Axis, etc.).
+- **Build Infrastructure**: Resolved `NU1605` package downgrade errors in `ManagedSecurity.Test` by aligning MSTest runner dependencies with version `1.5.2`. All 16 unit tests are passing once again.

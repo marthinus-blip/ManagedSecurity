@@ -7,6 +7,8 @@ using System.Net;
 using System.Net.Sockets;
 using ManagedSecurity.Core;
 using ManagedSecurity.Common;
+using ManagedSecurity.Discovery;
+
 
 namespace ManagedSecurity.Sentinel;
 
@@ -32,6 +34,8 @@ class Program
                 "search" => DoSearch(args),
                 "listen" => await DoListenAsync(args),
                 "transmit" => await DoTransmitAsync(args),
+                "scan" => await DoScanAsync(args),
+
                 _ => PrintUsage()
             };
         }
@@ -51,7 +55,9 @@ class Program
         Console.WriteLine("  sentinel extract <src> <dst> <password>");
         Console.WriteLine("  sentinel index <dir>");
         Console.WriteLine("  sentinel search <dir> <query>");
+        Console.WriteLine("  sentinel scan <subnet-prefix>");
         Console.WriteLine("  sentinel inspect <src>");
+
         return 1;
     }
 
@@ -225,6 +231,37 @@ class Program
 
         return 0;
     }
+
+    static async Task<int> DoScanAsync(string[] args)
+    {
+        if (args.Length < 2) return PrintUsage();
+        string subnet = args[1];
+
+        Console.WriteLine("[DISCOVERY] Phase 1: Sending ONVIF Multicast Probe (WS-Discovery)...");
+        var onvif = new OnvifDiscovery();
+        var onvifEndpoints = await onvif.ProbeAsync();
+        
+        if (onvifEndpoints.Count > 0)
+        {
+            Console.WriteLine($"[DISCOVERY] ONVIF self-reported {onvifEndpoints.Count} cameras:");
+            foreach (var ep in onvifEndpoints) Console.WriteLine($"- {ep} [Verified ONVIF Device]");
+        }
+
+        Console.WriteLine($"\n[DISCOVERY] Phase 2: Scanning subnet {subnet}.0/24 on common vendor ports...");
+        var scanner = new RtspScanner();
+        var results = await scanner.ScanSubnetAsync(subnet);
+
+        Console.WriteLine($"[DISCOVERY] Found {results.Count} active RTSP streams:");
+        foreach (var r in results)
+        {
+            string authLabel = r.RequiresAuth ? "[AUTH REQUIRED]" : "[OPEN]";
+            Console.WriteLine($"- {r.Url} {authLabel}");
+        }
+
+        return 0;
+    }
+
+
 
     static int DoRecord(string[] args)
     {

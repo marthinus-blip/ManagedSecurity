@@ -523,15 +523,27 @@ public class ManagedSecurityStream : Stream
         int headerSize = h.TotalLength - h.PayloadLength;
         _stopwatch.Restart();
 
-        if (_cipher.AsyncDecryptor != null && h.IvLength == 12 && h.SequenceLength == 8) // Profile S=2 check
+        if (_cipher.AsyncDecryptor != null)
         {
             var key = _cipher.GetKey(h.KeyIndex);
-            await _cipher.AsyncDecryptor.DecryptS2Async(h, _buffer.AsMemory(0, h.TotalLength), _buffer.AsMemory(headerSize, h.PayloadLength), key);
+            if (h.IvLength == 12 && h.SequenceLength == 8) // S=2
+            {
+                await _cipher.AsyncDecryptor.DecryptS2Async(h, _buffer.AsMemory(0, h.TotalLength), _buffer.AsMemory(headerSize, h.PayloadLength), key);
+            }
+            else if (h.IvLength == 12 && h.SequenceLength == 0) // S=0
+            {
+                await _cipher.AsyncDecryptor.DecryptS0Async(h, _buffer.AsMemory(0, h.TotalLength), _buffer.AsMemory(headerSize, h.PayloadLength), key);
+            }
+            else
+            {
+                DecryptFrameSync(h);
+            }
         }
         else
         {
             DecryptFrameSync(h);
         }
+
         
         _stopwatch.Stop();
         ValidateFrameAndSetBuffer(h);

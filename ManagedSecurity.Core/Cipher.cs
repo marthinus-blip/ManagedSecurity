@@ -7,13 +7,16 @@ namespace ManagedSecurity.Core
 {
     public interface IAsyncDecryptor
     {
+        Task DecryptS0Async(Bindings.Header h, ReadOnlyMemory<byte> message, Memory<byte> destination, ReadOnlyMemory<byte> key);
         Task DecryptS2Async(Bindings.Header h, ReadOnlyMemory<byte> message, Memory<byte> destination, ReadOnlyMemory<byte> key);
     }
 
     public interface IAsyncEncryptor
     {
+        Task EncryptS0Async(ReadOnlyMemory<byte> plaintext, Memory<byte> destination, int keyIndex, ReadOnlyMemory<byte> key);
         Task EncryptS2Async(ReadOnlyMemory<byte> plaintext, Memory<byte> destination, int keyIndex, ulong sequenceNumber, ReadOnlyMemory<byte> key);
     }
+
 
     public class Cipher
     {
@@ -158,6 +161,37 @@ namespace ManagedSecurity.Core
             aes.Encrypt(nonce, plaintext, ciphertextDst, tagDst, aad);
         }
 
+        public async Task<byte[]> DecryptAsync(ReadOnlyMemory<byte> message)
+        {
+            var h = new Bindings.Header(message.Span);
+            byte[] plaintext = new byte[h.PayloadLength];
+            await DecryptAsync(message, plaintext);
+            return plaintext;
+        }
+
+        public async Task DecryptAsync(ReadOnlyMemory<byte> message, Memory<byte> destination)
+        {
+            var h = new Bindings.Header(message.Span);
+            
+            if (AsyncDecryptor != null)
+            {
+                var key = _keyProvider.GetKey(h.KeyIndex);
+                if (h.IvLength == 12 && h.MacLength == 16 && h.SequenceLength == 0) // S0
+                {
+                    await AsyncDecryptor.DecryptS0Async(h, message, destination, key);
+                    return;
+                }
+                else if (h.IvLength == 12 && h.MacLength == 16 && h.SequenceLength == 8) // S2
+                {
+                    await AsyncDecryptor.DecryptS2Async(h, message, destination, key);
+                    return;
+                }
+            }
+
+            // Fallback to sync kernel
+            Decrypt(message.Span, destination.Span);
+        }
+
         public byte[] Decrypt(ReadOnlySpan<byte> message)
         {
             var h = new Bindings.Header(message);
@@ -165,6 +199,7 @@ namespace ManagedSecurity.Core
             Decrypt(message, plaintext);
             return plaintext;
         }
+
 
         public void Decrypt(ReadOnlySpan<byte> message, Span<byte> destination)
         {

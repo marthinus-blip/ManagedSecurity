@@ -1,8 +1,9 @@
 using System;
 using System.IO;
 using System.Text;
-using System.Collections.Generic;
+using System.Linq;
 using ManagedSecurity.Common;
+
 
 namespace ManagedSecurity.Sentinel;
 
@@ -12,11 +13,13 @@ public static class VaultIndexer
     {
         if (!Directory.Exists(path)) yield break;
 
-        foreach (var file in Directory.EnumerateFiles(path, "*.msg"))
+        var files = Directory.EnumerateFiles(path, "*.msg").Concat(Directory.EnumerateFiles(path, "*.bin"));
+        foreach (var file in files)
         {
             var entry = TryGetEntry(file);
             if (entry != null) yield return entry;
         }
+
     }
 
     public static VaultEntry? TryGetEntry(string filePath)

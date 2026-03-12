@@ -47,6 +47,7 @@ public static class VaultIndexer
                 ChunkSize = header.ChunkSize,
                 KeyIndex = header.KeyIndex,
                 SeekTableOffset = header.SeekTableOffset,
+                FileSize = fs.Length,
                 Metadata = metadata
             };
 

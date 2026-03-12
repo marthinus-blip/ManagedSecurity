@@ -490,3 +490,14 @@ local-packages/
 
 # Next steps
 .next.md
+
+/vault
+# Runtime Data & Binaries
+p@ssword
+*.mp4
+*.msg
+vlc_log.txt
+vault_cam/
+vault_real/
+ManagedSecurity.Sentinel/bin/
+ManagedSecurity.Sentinel/obj/

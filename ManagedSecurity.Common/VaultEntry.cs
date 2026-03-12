@@ -10,6 +10,7 @@ public class VaultEntry
     public int ChunkSize { get; set; }
     public int KeyIndex { get; set; }
     public ulong SeekTableOffset { get; set; }
+    public long FileSize { get; set; } // Added FileSize
     public string Metadata { get; set; } = string.Empty;
     public Dictionary<string, string> Tags { get; set; } = new();
 }

@@ -199,18 +199,28 @@ public class ManagedSecurityStream : Stream
         if (_bufferPos == 0 && !isFinal) return;
 
         const int ProfileId = 2;
-        int baseHeaderSize = _cipher.GetRequiredSize(_chunkSize, _keyIndex, ProfileId) - _chunkSize;
-        
+        // The buffer was pre-filled starting at a fixed offset calculated during constructor.
+        // We need to calculate the ACTUAL header size for the CURRENT buffer content.
+        int maxOverhead = _cipher.GetRequiredSize(_chunkSize, _keyIndex, ProfileId) - _chunkSize;
+        int actualOverhead = _cipher.GetRequiredSize(_bufferPos, _keyIndex, ProfileId) - _bufferPos;
+
+        // If the actual header is smaller than we reserved (common for final small chunks),
+        // we must shift the plaintext left to meet the header.
+        if (actualOverhead < maxOverhead)
+        {
+            _buffer.AsSpan(maxOverhead, _bufferPos).CopyTo(_buffer.AsSpan(actualOverhead));
+        }
+
         _stopwatch.Restart();
 
         if (_cipher.AsyncEncryptor != null)
         {
             var key = _cipher.GetKey(_keyIndex);
-            await _cipher.AsyncEncryptor.EncryptS2Async(_buffer.AsMemory(baseHeaderSize, _bufferPos), _buffer.AsMemory(0, _buffer.Length), _keyIndex, _sequenceNumber, key);
+            await _cipher.AsyncEncryptor.EncryptS2Async(_buffer.AsMemory(actualOverhead, _bufferPos), _buffer.AsMemory(0, _buffer.Length), _keyIndex, _sequenceNumber, key);
         }
         else
         {
-            EncryptFrameSync(baseHeaderSize, ProfileId);
+            EncryptFrameSync(actualOverhead, ProfileId);
         }
         
         _stopwatch.Stop();
@@ -224,9 +234,9 @@ public class ManagedSecurityStream : Stream
         _sequenceNumber++;
     }
 
-    private void EncryptFrameSync(int baseHeaderSize, int profileId)
+    private void EncryptFrameSync(int headerSize, int profileId)
     {
-        Span<byte> plaintext = _buffer.AsSpan(baseHeaderSize, _bufferPos);
+        Span<byte> plaintext = _buffer.AsSpan(headerSize, _bufferPos);
         _cipher.Encrypt(plaintext, _buffer, _keyIndex, profileId, _sequenceNumber);
     }
 
@@ -261,10 +271,16 @@ public class ManagedSecurityStream : Stream
         if (_bufferPos == 0 && !isFinal) return;
 
         const int ProfileId = 2;
-        int baseHeaderSize = _cipher.GetRequiredSize(_chunkSize, _keyIndex, ProfileId) - _chunkSize;
-        
+        int maxOverhead = _cipher.GetRequiredSize(_chunkSize, _keyIndex, ProfileId) - _chunkSize;
+        int actualOverhead = _cipher.GetRequiredSize(_bufferPos, _keyIndex, ProfileId) - _bufferPos;
+
+        if (actualOverhead < maxOverhead)
+        {
+            _buffer.AsSpan(maxOverhead, _bufferPos).CopyTo(_buffer.AsSpan(actualOverhead));
+        }
+
         _stopwatch.Restart();
-        EncryptFrameSync(baseHeaderSize, ProfileId);
+        EncryptFrameSync(actualOverhead, ProfileId);
         _stopwatch.Stop();
         
         UpdateTelemetryForEncryption(ProfileId);

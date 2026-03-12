@@ -26,22 +26,135 @@ public class CommanderBehavior : IAgentBehavior
     public string Name => "Commander";
     private readonly OrchestrationConfig _config;
     private readonly ConcurrentDictionary<string, DateTime> _activeWorkers = new();
-    private readonly ConcurrentQueue<DiscoveryResult> _unassignedCameras = new();
+    private readonly ConcurrentDictionary<string, DiscoveryResult> _unassignedCameras = new();
     private readonly ConcurrentDictionary<string, List<TaskLease>> _workerTasks = new();
+    private readonly CameraStore? _store;
     private bool _isRunning;
+    private string? _discoverySubnet;
+    private DateTime _lastScanTime = DateTime.MinValue;
+    private readonly TimeSpan _scanInterval = TimeSpan.FromMinutes(2);
     
     public event Action<string, TaskAssignment>? OnTaskAssigned;
 
-    public CommanderBehavior(OrchestrationConfig config)
+    public CommanderBehavior(OrchestrationConfig config, CameraStore? store = null)
     {
         _config = config;
+        _store = store;
+    }
+
+    public async Task InitializeFromStoreAsync()
+    {
+        if (_store != null)
+        {
+            var cameras = await _store.LoadAsync();
+            foreach (var cam in cameras)
+            {
+                _unassignedCameras.TryAdd(cam.Url, cam);
+            }
+            Console.WriteLine($"[COMMANDER] Loaded {cameras.Count} cameras from store.");
+        }
     }
 
     public void AddCameraToPool(DiscoveryResult camera)
     {
-        _unassignedCameras.Enqueue(camera);
-        Console.WriteLine($"[COMMANDER] Camera pooled: {camera.IpAddress}");
+        // Use URL as unique key for now
+        if (_unassignedCameras.TryAdd(camera.Url, camera))
+        {
+            Console.WriteLine($"[COMMANDER] Camera pooled: {camera.IpAddress}");
+            _ = SaveStoreAsync();
+        }
     }
+
+    public void ConfigureCamera(string urlOrId, string displayName)
+    {
+        Console.WriteLine($"[COMMANDER] Attempting to configure: '{urlOrId}' as '{displayName}'");
+        
+        string? targetUrl = null;
+        if (_unassignedCameras.ContainsKey(urlOrId))
+        {
+            targetUrl = urlOrId;
+        }
+        else 
+        {
+            // Try searching by ID
+            var match = _unassignedCameras.Values.FirstOrDefault(c => c.Id == urlOrId || c.Url == urlOrId);
+            if (match != null)
+            {
+                targetUrl = match.Url;
+            }
+        }
+
+        if (targetUrl != null)
+        {
+            var cam = _unassignedCameras[targetUrl];
+            cam.DisplayName = displayName;
+            cam.IsConfigured = true;
+            Console.WriteLine($"[COMMANDER] Configured {targetUrl} as '{displayName}'");
+            _ = SaveStoreAsync();
+        }
+        else 
+        {
+            Console.WriteLine($"[COMMANDER] Warning: Failed to find camera for configuration. Input was: '{urlOrId}'");
+            Console.WriteLine($"[COMMANDER] Available keys: {string.Join(", ", _unassignedCameras.Keys)}");
+        }
+    }
+
+    private async Task SaveStoreAsync()
+    {
+        if (_store != null)
+        {
+            try 
+            {
+                await _store.SaveAsync(_unassignedCameras.Values.ToList());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[COMMANDER] CRITICAL: Failed to save camera store: {ex.Message}");
+            }
+        }
+    }
+
+    public void EnableAutoDiscovery(string subnet)
+    {
+        _discoverySubnet = subnet;
+        Console.WriteLine($"[COMMANDER] Auto-Discovery enabled for {subnet}.0/24");
+    }
+
+    private async Task PerformDiscoveryScanAsync()
+    {
+        if (string.IsNullOrEmpty(_discoverySubnet)) return;
+        if (DateTime.UtcNow - _lastScanTime < _scanInterval) return;
+
+        _lastScanTime = DateTime.UtcNow;
+        Console.WriteLine($"[COMMANDER] Background scan started on {_discoverySubnet}.0/24...");
+        
+        try 
+        {
+            var scanner = new RtspScanner();
+            var results = await scanner.ScanSubnetAsync(_discoverySubnet);
+            
+            var onvif = new OnvifDiscovery();
+            var onvifDevices = await onvif.ProbeAsync();
+
+            foreach (var r in results)
+            {
+                var match = onvifDevices.FirstOrDefault(o => o.IpAddress == r.IpAddress);
+                var finalResult = r;
+                if (match != null)
+                {
+                    finalResult.Vendor = match.Name;
+                    finalResult.Model = match.Model;
+                }
+                AddCameraToPool(finalResult);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[COMMANDER] Discovery scan failed: {ex.Message}");
+        }
+    }
+
+    public List<DiscoveryResult> GetCameras() => _unassignedCameras.Values.ToList();
 
     public async Task StartAsync(CancellationToken ct)
     {
@@ -53,6 +166,11 @@ public class CommanderBehavior : IAgentBehavior
             await Task.Delay(_config.GovernanceInterval, ct);
             PerformGovernance();
             AssignPendingTasks();
+
+            if (!string.IsNullOrEmpty(_discoverySubnet))
+            {
+                _ = PerformDiscoveryScanAsync();
+            }
         }
     }
 
@@ -97,8 +215,11 @@ public class CommanderBehavior : IAgentBehavior
     {
         if (_activeWorkers.IsEmpty) return;
 
-        while (_unassignedCameras.TryDequeue(out var camera))
+        foreach (var camera in _unassignedCameras.Values)
         {
+            // Check if already assigned
+            if (_workerTasks.Values.Any(tl => tl.Any(l => l.CameraUrl == camera.Url))) continue;
+
             // Simple Round-Robin or Least-Load assignment
             var targetWorker = _activeWorkers.Keys.First(); // For now just the first one
             

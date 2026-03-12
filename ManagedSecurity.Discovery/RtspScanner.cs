@@ -76,7 +76,7 @@ public class RtspScanner
             var status = await CheckPathAsync(ip, port, path);
             if (status.Found)
             {
-                return new DiscoveryResult(ip, port, path, RequiresAuth: status.AuthRequired);
+                return new DiscoveryResult(ip, port, path) { RequiresAuth = status.AuthRequired };
             }
         }
 
@@ -92,15 +92,15 @@ public class RtspScanner
             using var stream = client.GetStream();
             stream.ReadTimeout = _timeoutMs;
 
-            // Simple RTSP OPTIONS request
-            string request = $"OPTIONS rtsp://{ip}:{port}{path} RTSP/1.0\r\n" +
+            // USE DESCRIBE instead of OPTIONS for better stream verification
+            string request = $"DESCRIBE rtsp://{ip}:{port}{path} RTSP/1.0\r\n" +
                              $"CSeq: 1\r\n" +
                              $"User-Agent: SentinelDiscovery/1.0\r\n\r\n";
 
             byte[] buffer = Encoding.UTF8.GetBytes(request);
             await stream.WriteAsync(buffer);
 
-            byte[] responseBuffer = new byte[1024];
+            byte[] responseBuffer = new byte[2048];
             int read = await stream.ReadAsync(responseBuffer);
             string response = Encoding.UTF8.GetString(responseBuffer, 0, read);
 
@@ -113,6 +113,8 @@ public class RtspScanner
                 return (true, true);
             }
 
+            // Some cameras return 404 for DESCRIBE on / but 200 for OPTIONS.
+            // We only count it as "Found" if it's 200 or 401 (Auth required).
             return (false, false);
         }
         catch

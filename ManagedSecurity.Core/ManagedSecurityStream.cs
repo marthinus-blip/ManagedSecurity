@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Security.Cryptography;
 using ManagedSecurity.Common;
+using ManagedSecurity.Common.Logging;
 
 namespace ManagedSecurity.Core;
 
@@ -225,9 +226,11 @@ public class ManagedSecurityStream : Stream
         
         _stopwatch.Stop();
         
-        UpdateTelemetryForEncryption(ProfileId);
+        UpdateTelemetryAfterFrame(_bufferPos);
 
         int packetSize = _cipher.GetRequiredSize(_bufferPos, _keyIndex, ProfileId);
+        // [thought_streaming_telemetry]((2026-03-14T10:40:00) (Visibility of state: providing frame-level heartbeat for live tracking.))
+        SentinelLogger.Heartbeat(_cipher.Logger, "ManagedSecurityStream", $"WriteFrame: {packetSize} bytes seq={_sequenceNumber}");
         await _innerStream.WriteAsync(_buffer.AsMemory(0, packetSize));
         
         _bufferPos = 0;
@@ -240,15 +243,16 @@ public class ManagedSecurityStream : Stream
         _cipher.Encrypt(plaintext, _buffer, _keyIndex, profileId, _sequenceNumber);
     }
 
-    private void UpdateTelemetryForEncryption(int profileId)
+    private void UpdateTelemetryAfterFrame(int payloadLength)
     {
         LastFrameDurationMs = _stopwatch.Elapsed.TotalMilliseconds;
-        TotalBytesProcessed += _bufferPos;
+        TotalBytesProcessed += payloadLength;
         FrameCount++;
         
         double totalSeconds = (DateTimeOffset.UtcNow - _streamStartTime).TotalSeconds;
         if (totalSeconds > 0)
         {
+            // [thought_throughput_calc]((2026-03-14T13:12:00) (Standard Mbps calculation: (bits / seconds) / 10^6))
             ThroughputMbps = (TotalBytesProcessed * 8.0) / (totalSeconds * 1000 * 1000);
         }
     }
@@ -283,7 +287,7 @@ public class ManagedSecurityStream : Stream
         EncryptFrameSync(actualOverhead, ProfileId);
         _stopwatch.Stop();
         
-        UpdateTelemetryForEncryption(ProfileId);
+        UpdateTelemetryAfterFrame(_bufferPos);
 
         int packetSize = _cipher.GetRequiredSize(_bufferPos, _keyIndex, ProfileId);
         _innerStream.Write(_buffer, 0, packetSize);
@@ -400,6 +404,9 @@ public class ManagedSecurityStream : Stream
             {
                 break;
             }
+
+            // For live streaming, return as soon as we have some data
+            if (totalRead > 0) break;
         }
 
         return totalRead;
@@ -441,6 +448,9 @@ public class ManagedSecurityStream : Stream
             {
                 break; // End of stream
             }
+
+            // For live streaming, return as soon as we have some data
+            if (totalRead > 0) break;
         }
 
         return totalRead;
@@ -574,9 +584,7 @@ public class ManagedSecurityStream : Stream
     private void ValidateFrameAndSetBuffer(Bindings.Header h)
     {
         int headerSize = h.TotalLength - h.PayloadLength;
-        LastFrameDurationMs = _stopwatch.Elapsed.TotalMilliseconds;
-        TotalBytesProcessed += h.PayloadLength;
-        FrameCount++;
+        UpdateTelemetryAfterFrame(h.PayloadLength);
 
         ulong frameSeq = BinaryPrimitives.ReadUInt64BigEndian(h.GetSequence(_buffer));
         if (frameSeq != _sequenceNumber)

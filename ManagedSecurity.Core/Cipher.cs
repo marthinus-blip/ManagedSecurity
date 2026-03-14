@@ -2,6 +2,8 @@ using System;
 using System.Security.Cryptography;
 using System.Buffers.Binary;
 using ManagedSecurity.Common;
+using ManagedSecurity.Common.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace ManagedSecurity.Core
 {
@@ -23,10 +25,12 @@ namespace ManagedSecurity.Core
         private readonly IKeyProvider _keyProvider;
         public IAsyncDecryptor? AsyncDecryptor { get; set; }
         public IAsyncEncryptor? AsyncEncryptor { get; set; }
+        public ILogger Logger { get; }
 
-        public Cipher(IKeyProvider keyProvider)
+        public Cipher(IKeyProvider keyProvider, ILogger? logger = null)
         {
             _keyProvider = keyProvider ?? throw new ArgumentNullException(nameof(keyProvider));
+            Logger = logger ?? SentinelLogger.CreateLogger<Cipher>();
         }
 
         public int GetRequiredSize(int plaintextLength, int keyIndex, int profile)
@@ -72,15 +76,19 @@ namespace ManagedSecurity.Core
             var h = new Bindings.Header(destination);
             
             RandomNumberGenerator.Fill(destination.Slice(h.IvOffset, h.IvLength));
-
-            using var aes = new AesGcm(key.Span, MacLength);
-            
             var nonce = h.GetIv(destination);
             var ciphertextDst = h.GetPayload(destination);
             var tagDst = h.GetMac(destination);
             var associatedData = destination.Slice(0, h.IvOffset);
 
+            using var aes = new AesGcm(key.Span, MacLength);
             aes.Encrypt(nonce, plaintext, ciphertextDst, tagDst, associatedData);
+
+            if (plaintext.Length > 1000) // Snapshot diagnostic
+            {
+                // [thought_diagnostic_telemetry]((2026-03-14T10:50:00) (Providing explicit proof of state via crypto metadata.))
+                SentinelLogger.Heartbeat(Logger, "CipherS0", $"K={BitConverter.ToString(key.Span.Slice(0, 4).ToArray()).Replace("-", "").ToLower()}... IV={BitConverter.ToString(nonce.ToArray()).Replace("-", "").ToLower()} TAG={BitConverter.ToString(tagDst.ToArray()).Replace("-", "").ToLower()}");
+            }
         }
 
         private void EncryptS1(ReadOnlySpan<byte> plaintext, Span<byte> destination, int keyIndex)

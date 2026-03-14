@@ -12,9 +12,11 @@ namespace ManagedSecurity.Orchestration;
 
 public record HeartbeatMessage(string AgentId, DateTime Timestamp, float CpuLoad);
 
-public record TaskAssignment(string CameraUrl, string CameraId, TimeSpan LeaseDuration);
+public record TaskAssignment(string CameraUrl, string Id, string IpAddress, int Port, string? Path, string? SnapshotUrl, TimeSpan LeaseDuration);
 
 public record TaskLease(string CameraUrl, DateTime ExpiresAt);
+
+public record GuardianActivityAlert(string AgentId, string CameraUrl, DateTime Timestamp, float Intensity);
 
 
 /// <summary>
@@ -35,6 +37,7 @@ public class CommanderBehavior : IAgentBehavior
     private readonly TimeSpan _scanInterval = TimeSpan.FromMinutes(2);
     
     public event Action<string, TaskAssignment>? OnTaskAssigned;
+    public event Action<GuardianActivityAlert>? OnActivityDetected;
 
     public CommanderBehavior(OrchestrationConfig config, CameraStore? store = null)
     {
@@ -156,6 +159,12 @@ public class CommanderBehavior : IAgentBehavior
 
     public List<DiscoveryResult> GetCameras() => _unassignedCameras.Values.ToList();
 
+    public void TriggerManualScan()
+    {
+        _lastScanTime = DateTime.MinValue;
+        _ = PerformDiscoveryScanAsync();
+    }
+
     public async Task StartAsync(CancellationToken ct)
     {
         _isRunning = true;
@@ -183,6 +192,12 @@ public class CommanderBehavior : IAgentBehavior
     public void ReceiveHeartbeat(HeartbeatMessage hb)
     {
         _activeWorkers.AddOrUpdate(hb.AgentId, hb.Timestamp, (_, _) => hb.Timestamp);
+    }
+
+    public void ReceiveAlert(GuardianActivityAlert alert)
+    {
+        Console.WriteLine($"[COMMANDER] ALERT from Scout {alert.AgentId}: Interest level {alert.Intensity:P1} on {alert.CameraUrl}");
+        OnActivityDetected?.Invoke(alert);
     }
 
     private void PerformGovernance()
@@ -223,7 +238,7 @@ public class CommanderBehavior : IAgentBehavior
             // Simple Round-Robin or Least-Load assignment
             var targetWorker = _activeWorkers.Keys.First(); // For now just the first one
             
-            var assignment = new TaskAssignment(camera.Url, camera.IpAddress, TimeSpan.FromMinutes(5));
+            var assignment = new TaskAssignment(camera.Url, camera.Id, camera.IpAddress, camera.Port, camera.Path, camera.SnapshotUrl, TimeSpan.FromMinutes(5));
             var lease = new TaskLease(camera.Url, DateTime.UtcNow.Add(assignment.LeaseDuration));
 
             _workerTasks.AddOrUpdate(targetWorker, 

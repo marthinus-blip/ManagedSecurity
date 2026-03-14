@@ -1,0 +1,52 @@
+using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Logging;
+
+namespace ManagedSecurity.Common.Logging;
+
+/// <summary>
+/// Sentinel Logger: High-performance, NativeAOT-compatible logger with AiThoughts support.
+/// Follows the Aesthetic of Verifiable Truth.
+/// </summary>
+public static partial class SentinelLogger
+{
+    private static ILoggerFactory? _factory;
+    private static ILogger _defaultLogger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
+
+    public static void Initialize(ILoggerFactory factory)
+    {
+        _factory = factory;
+        _defaultLogger = factory.CreateLogger("Sentinel");
+    }
+
+    /// <summary>
+    /// Logs an AI Thought - reasoning that explains "Why" a specific implementation was chosen.
+    /// This is the lowest level of logging, below Trace.
+    /// </summary>
+    public static void AiThought(string topic, string reasoning, [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
+    {
+        // We use EventId 777 for AI Thoughts (Lucky No. 7 for ground truth)
+        // Map to Trace level but with a specific prefix.
+        LogAiThought(_defaultLogger, topic, reasoning, file, line);
+    }
+
+    [LoggerMessage(
+        EventId = 777,
+        Level = LogLevel.Trace,
+        Message = "[AiThought] [{topic}] ({file}:{line}) {reasoning}")]
+    private static partial void LogAiThought(ILogger? logger, string topic, string reasoning, string file, int line);
+
+    [LoggerMessage(
+        EventId = 100,
+        Level = LogLevel.Information,
+        Message = "[HEARTBEAT] {component} {state}")]
+    public static partial void Heartbeat(ILogger logger, string component, string state);
+
+    [LoggerMessage(
+        EventId = 500,
+        Level = LogLevel.Error,
+        Message = "[NO SIGNAL] {component} Failure: {error}")]
+    public static partial void NoSignal(ILogger logger, string component, string error);
+    
+    public static ILogger CreateLogger<T>() => _factory?.CreateLogger<T>() ?? _defaultLogger!;
+    public static ILogger CreateLogger(string category) => _factory?.CreateLogger(category) ?? _defaultLogger!;
+}

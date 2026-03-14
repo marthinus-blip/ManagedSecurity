@@ -39,8 +39,13 @@ public class DiscoveryResult
         set { /* Required for some serializers, but we mostly use getter */ }
     }
 
+    private string? _snapshotUrl;
     [System.Text.Json.Serialization.JsonPropertyName("snapshotUrl")]
-    public string SnapshotUrl => $"/api/snapshot/{Id}";
+    public string SnapshotUrl 
+    { 
+        get => _snapshotUrl ?? $"/api/snapshot/{Id}";
+        set => _snapshotUrl = value;
+    }
 }
 
 public static class RtspWellKnown

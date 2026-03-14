@@ -12,6 +12,8 @@ using ManagedSecurity.Orchestration;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using ManagedSecurity.Common.Logging;
 
 namespace ManagedSecurity.Sentinel;
 
@@ -42,6 +44,7 @@ class Program
                 "version" => PrintVersion(),
                 "live-stream" => await DoLiveStreamAsync(args),
 
+                "onvif-diag" => await DoOnvifDiag(args),
                 _ => PrintUsage()
             };
         }
@@ -623,6 +626,12 @@ class Program
         
         Console.WriteLine($"[SENTINEL] Starting Agent v{version}...");
         
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Trace));
+        SentinelLogger.Initialize(loggerFactory);
+
+        byte[] key = DeriveKey(password);
+        var cipher = new Cipher(new SimpleKeyProvider(key));
+        
         var agent = new SentinelAgent();
         var config = new OrchestrationConfig();
         string configFilePath = Path.GetFullPath(Paths.GetRuntimePath("managed_cameras.json"));
@@ -633,7 +642,13 @@ class Program
         store.SetOptions(new JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default, WriteIndented = true });
         
         var commander = role == "commander" || role == "both" ? new CommanderBehavior(config, store) : null;
-        var guardian = role == "scout" || role == "both" ? new GuardianBehavior(agent.Id, config, hb => commander?.ReceiveHeartbeat(hb)) : null;
+        var guardian = role == "scout" || role == "both" ? new GuardianBehavior(
+            agent.Id, 
+            config, 
+            "http://localhost:5188",
+            hb => commander?.ReceiveHeartbeat(hb),
+            alert => commander?.ReceiveAlert(alert),
+            cipher) : null;
 
         // Domain Discovery (Ghost Sentinel detection)
         var domain = new ManagedSecurity.Orchestration.DomainBehavior(agent.Id, version, role, new JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default });
@@ -737,8 +752,10 @@ class Program
                     if (req.HttpMethod == "OPTIONS") { resp.Close(); return; }
 
                     string url = req.Url?.AbsolutePath ?? "";
+                    Console.WriteLine($"[GOVERNOR] {req.HttpMethod} {url}");
+                    Console.Out.Flush();
 
-                    if (url == "/api/discovery" && req.HttpMethod == "GET")
+                    if (url.Equals("/api/discovery", StringComparison.OrdinalIgnoreCase) && req.HttpMethod == "GET")
                     {
                         var cameras = commander.GetCameras();
                         var options = new System.Text.Json.JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default };
@@ -767,35 +784,46 @@ class Program
                         resp.StatusCode = 200;
                         resp.Close();
                     }
-                    else if (url.StartsWith("/api/snapshot/") && req.HttpMethod == "GET")
+                    else if (url.Equals("/api/scan", StringComparison.OrdinalIgnoreCase) && req.HttpMethod == "POST")
+                    {
+                        Console.WriteLine("[GOVERNOR] Manual Radar Scan requested.");
+                        commander.TriggerManualScan();
+                        resp.StatusCode = 200;
+                        resp.Close();
+                    }
+                    else if (url.StartsWith("/api/snapshot/", StringComparison.OrdinalIgnoreCase) && req.HttpMethod == "GET")
                     {
                         string cameraId = url.Substring(14).TrimEnd('/');
                         var cameras = commander.GetCameras();
-                        var cam = cameras.FirstOrDefault(c => c.Id == cameraId || c.DisplayName == cameraId);
+                        var cam = cameras.FirstOrDefault(c => string.Equals(c.Id, cameraId, StringComparison.OrdinalIgnoreCase) || string.Equals(c.DisplayName, cameraId, StringComparison.OrdinalIgnoreCase));
                         
                         if (cam == null)
                         {
+                            Console.WriteLine($"[GOVERNOR] Snapshot 404: {cameraId}");
                             resp.StatusCode = 404;
                             resp.Close();
                             return;
                         }
 
-                        await HandleSnapshotRequest(context, cam.Url, cam.DisplayName ?? cam.Id, user, pass, cipher);
+                        bool needsAuth = cam.RequiresAuth;
+                        await HandleSnapshotRequest(context, cam.Url, cam.DisplayName ?? cam.Id, needsAuth ? user : null, needsAuth ? pass : null, cipher);
                     }
-                    else if (url.StartsWith("/stream/") && req.HttpMethod == "GET")
+                    else if (url.StartsWith("/stream/", StringComparison.OrdinalIgnoreCase) && req.HttpMethod == "GET")
                     {
                         string cameraId = url.Substring(8).TrimEnd('/');
                         var cameras = commander.GetCameras();
-                        var cam = cameras.FirstOrDefault(c => c.Id == cameraId || c.DisplayName == cameraId);
+                        var cam = cameras.FirstOrDefault(c => string.Equals(c.Id, cameraId, StringComparison.OrdinalIgnoreCase) || string.Equals(c.DisplayName, cameraId, StringComparison.OrdinalIgnoreCase));
                         
                         if (cam == null)
                         {
+                            Console.WriteLine($"[GOVERNOR] Stream 404: {cameraId}");
                             resp.StatusCode = 404;
                             resp.Close();
                             return;
                         }
 
-                        await HandleLiveStreamRequest(context, cam.Url, cam.DisplayName ?? cam.Id, cipher);
+                        bool needsAuth = cam.RequiresAuth;
+                        await HandleLiveStreamRequest(context, cam.Url, cam.DisplayName ?? cam.Id, needsAuth ? user : null, needsAuth ? pass : null, cipher);
                     }
                     else
                     {
@@ -825,16 +853,17 @@ class Program
             using var ms = new MemoryStream();
             bool success = await TryCaptureSnapshot(ms, authenticatedUrl);
             
-            if (!success)
+            if (!success || ms.Length == 0)
             {
-                Console.WriteLine($"[SNAPSHOT] Signal lost for {cameraId}. Sending fallback pattern (Secure).");
+                Console.WriteLine($"[SNAPSHOT] Signal lost or empty for {cameraId} (Len={ms.Length}). Sending fallback pattern (Secure).");
+                ms.SetLength(0);
                 await TryCaptureSnapshot(ms, "test"); 
             }
 
             byte[] rawJpeg = ms.ToArray();
+            Console.WriteLine($"[SNAPSHOT] Captured {rawJpeg.Length} bytes for {cameraId}");
             
             // Encrypt the snapshot (Master Key Index = 0)
-            // We use the AAD to bind the specific camera ID to the snapshot
             byte[] encrypted = cipher.Encrypt(rawJpeg, 0); 
 
             context.Response.ContentType = "application/octet-stream";
@@ -844,7 +873,7 @@ class Program
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[SNAPSHOT] Failed to handle secure snapshot: {ex.Message}");
+            Console.WriteLine($"[SNAPSHOT] Failed to handle secure snapshot for {cameraId}: {ex.Message}\n{ex.StackTrace}");
             context.Response.Close();
         }
     }
@@ -854,7 +883,7 @@ class Program
         string pipeline;
         if (url.ToLower().Contains("test") || url == "test")
         {
-            pipeline = "videotestsrc num-buffers=1 pattern=smtpe75 ! video/x-raw,width=800,height=450 ! jpegenc ! fdsink fd=1";
+            pipeline = "videotestsrc num-buffers=1 pattern=smpte ! video/x-raw,width=800,height=450 ! jpegenc ! fdsink fd=1";
         }
         else 
         {
@@ -876,26 +905,39 @@ class Program
         if (process == null) return false;
 
         var copyTask = process.StandardOutput.BaseStream.CopyToAsync(output);
-        var waitTask = process.WaitForExitAsync();
+        var errTask = process.StandardError.ReadToEndAsync();
         
-        // Timeout after 3 seconds for real streams
-        var timeout = url == "test" ? TimeSpan.FromSeconds(5) : TimeSpan.FromSeconds(3);
-        var completed = await Task.WhenAny(copyTask, Task.Delay(timeout));
+        // Timeout after 20 seconds to allow for slow pipeline initialization
+        var timeout = Task.Delay(TimeSpan.FromSeconds(20));
+        var completed = await Task.WhenAny(copyTask, timeout);
 
-        if (completed == copyTask && process.ExitCode == 0)
+        if (completed == copyTask)
         {
-            return true;
+            await process.WaitForExitAsync();
+            if (process.ExitCode == 0)
+            {
+                return true;
+            }
         }
 
         try { process.Kill(); } catch { }
+        
+        string errorOutput = await errTask;
+        if (!string.IsNullOrEmpty(errorOutput))
+        {
+            Console.WriteLine($"[SNAPSHOT-GST] Error: {errorOutput}");
+        }
+
+        return false;
         return false;
     }
 
-    static async Task HandleLiveStreamRequest(HttpListenerContext context, string sourceUrl, string cameraId, Cipher cipher)
+    static async Task HandleLiveStreamRequest(HttpListenerContext context, string sourceUrl, string cameraId, string? user, string? pass, Cipher cipher)
     {
         try
         {
             Console.WriteLine($"[LIVE] Client connected for {cameraId}");
+            Console.Out.Flush();
             context.Response.ContentType = "application/octet-stream";
             context.Response.SendChunked = true;
 
@@ -909,22 +951,43 @@ class Program
                 metadata: Encoding.UTF8.GetBytes(meta),
                 leaveOpen: true);
 
+            // [thought_streaming_stability]((2026-03-14T14:10:00) (Forcing immediate delivery of Master Header + Metadata))
+            await cryptoStream.WriteAsync(Array.Empty<byte>()); 
+            await responseStream.FlushAsync();
+
             string gstreamerCommand;
+            
+            // Inject credentials if missing
+            string authenticatedUrl = sourceUrl;
+            if (!string.IsNullOrEmpty(user) && !sourceUrl.Contains("@"))
+            {
+                authenticatedUrl = sourceUrl.Replace("rtsp://", $"rtsp://{user}:{pass}@");
+            }
+
             if (sourceUrl.ToLower().Contains("test") || sourceUrl.ToLower() == "test")
             {
+                // [thought_black_feed_fix]((2026-03-14T14:15:00) (Using fragmented MP4 with faststart-like behavior for non-seekable pipes.))
                 gstreamerCommand = "videotestsrc is-live=true pattern=ball " +
-                    "! video/x-raw,width=800,height=600,framerate=30/1 " +
-                    "! clockoverlay " +
-                    "! x264enc tune=zerolatency bitrate=1000 ! video/x-h264,profile=baseline " +
-                    "! mp4mux streamable=true fragment-duration=500 " +
+                    "! video/x-raw,width=800,height=600,framerate=25/1 " +
+                    "! clockoverlay halignment=right valignment=bottom " +
+                    "! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=ultrafast bframes=0 key-int-max=25 ! video/x-h264,profile=baseline " +
+                    "! mp4mux streamable=true fragment-duration=100 presentation-time=true " +
+                    "! fdsink fd=1";
+            }
+            else if (sourceUrl.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase))
+            {
+                gstreamerCommand = $"rtspsrc location=\"{authenticatedUrl}\" latency=200 protocols=tcp ! rtph264depay ! h264parse ! avdec_h264 " +
+                    "! videoconvert ! videoscale ! video/x-raw,width=800,height=600 " +
+                    "! queue max-size-buffers=1 leaky=downstream ! x264enc tune=zerolatency bitrate=1200 speed-preset=ultrafast key-int-max=50 ! video/x-h264,profile=baseline " +
+                    "! mp4mux streamable=true fragment-duration=200 " +
                     "! fdsink fd=1";
             }
             else
             {
-                gstreamerCommand = $"uridecodebin uri=\"{sourceUrl}\" " +
-                    "! videoscale ! video/x-raw,width=800,height=600 " +
-                    "! x264enc tune=zerolatency bitrate=1000 ! video/x-h264,profile=baseline " +
-                    "! mp4mux streamable=true fragment-duration=500 " +
+                gstreamerCommand = $"uridecodebin uri=\"{authenticatedUrl}\" " +
+                    "! videoconvert ! videoscale ! video/x-raw,width=800,height=600 " +
+                    "! x264enc tune=zerolatency bitrate=1000 speed-preset=ultrafast key-int-max=50 ! video/x-h264,profile=baseline " +
+                    "! mp4mux streamable=true fragment-duration=200 " +
                     "! fdsink fd=1";
             }
 
@@ -935,25 +998,70 @@ class Program
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                EnvironmentVariables = { ["GST_DEBUG"] = "3" }
             };
 
             using var process = System.Diagnostics.Process.Start(psi);
             if (process != null)
             {
+                _ = Task.Run(async () => {
+                    var err = await process.StandardError.ReadToEndAsync();
+                    if (!string.IsNullOrEmpty(err)) Console.WriteLine($"[LIVE-GST] {err}");
+                });
+
                 using var gstStream = process.StandardOutput.BaseStream;
-                byte[] buffer = new byte[64 * 1024];
+                byte[] buffer = new byte[128 * 1024];
+
                 int read;
+                bool firstChunk = true;
+                int totalRead = 0;
+                MemoryStream headerBuffer = new MemoryStream();
+
                 while ((read = await gstStream.ReadAsync(buffer)) > 0)
                 {
-                    await cryptoStream.WriteAsync(buffer.AsMemory(0, read));
-                    await cryptoStream.FlushToFrameAsync();
+                    totalRead += read;
+                    
+                    if (firstChunk)
+                    {
+                        // [thought_mse_initialization]((2026-03-14T14:25:00) (Buffering first 16KB to ensure complete MP4 Init Segment delivery.))
+                        if (totalRead < 16384)
+                        {
+                            await headerBuffer.WriteAsync(buffer.AsMemory(0, read));
+                            continue; 
+                        }
+                        else
+                        {
+                            await headerBuffer.WriteAsync(buffer.AsMemory(0, read));
+                            byte[] initialData = headerBuffer.ToArray();
+                            Console.WriteLine($"[LIVE] Flushing Init Segment: {initialData.Length} bytes");
+                            await cryptoStream.WriteAsync(initialData);
+                            await cryptoStream.FlushToFrameAsync();
+                            await responseStream.FlushAsync();
+                            firstChunk = false;
+                            continue;
+                        }
+                    }
+
+                    try 
+                    {
+                        await cryptoStream.WriteAsync(buffer.AsMemory(0, read));
+                        await cryptoStream.FlushToFrameAsync();
+                        await responseStream.FlushAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[LIVE] Client disconnected or socket failure: {ex.Message}");
+                        break; 
+                    }
                 }
+
+                try { process.Kill(); } catch { }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[LIVE] Streaming error: {ex.Message}");
+            Console.WriteLine($"[LIVE] Streaming error for {cameraId}: {ex.Message}\n{ex.StackTrace}");
         }
         finally
         {
@@ -1087,11 +1195,9 @@ class Program
 
     static byte[] DeriveKey(string password)
     {
-        // Must match JS: new Uint8Array([0x70, 0x40, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0...])
-        byte[] key = new byte[32];
-        byte[] passBytes = Encoding.ASCII.GetBytes(password);
-        Buffer.BlockCopy(passBytes, 0, key, 0, Math.Min(passBytes.Length, 32));
-        return key;
+        // Must match JS and Ground Truth: SHA256 of the password
+        byte[] passBytes = Encoding.UTF8.GetBytes(password);
+        return SHA256.HashData(passBytes);
     }
 
     static List<(int Offset, NalUnitType Type)> GetSyncPoints(byte[] buffer, int count)
@@ -1113,6 +1219,13 @@ class Program
         private readonly ReadOnlyMemory<byte> _key;
         public SimpleKeyProvider(byte[] key) => _key = key;
         public ReadOnlyMemory<byte> GetKey(int keyIndex) => _key;
+    }
+
+    static async Task<int> DoOnvifDiag(string[] args)
+    {
+        await OnvifDiagnostic.RunProbe();
+        await OnvifDiagnostic.QueryStreamUri("192.168.8.23", "admin", "admin");
+        return 0;
     }
 }
 

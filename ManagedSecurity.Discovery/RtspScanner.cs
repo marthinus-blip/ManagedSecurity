@@ -41,6 +41,7 @@ public class RtspScanner
                 var result = await ProbeRtspPortAsync(ip, port);
                 if (result != null)
                 {
+                    Console.WriteLine($"[DISCOVERY] Found RTSP camera at {ip}:{port}{result.Path}");
                     results.Add(result);
                     break; // Port found, move to next host
                 }
@@ -92,8 +93,8 @@ public class RtspScanner
             using var stream = client.GetStream();
             stream.ReadTimeout = _timeoutMs;
 
-            // USE DESCRIBE instead of OPTIONS for better stream verification
-            string request = $"DESCRIBE rtsp://{ip}:{port}{path} RTSP/1.0\r\n" +
+            // Use OPTIONS instead of DESCRIBE for broader discovery compatibility
+            string request = $"OPTIONS rtsp://{ip}:{port}{path} RTSP/1.0\r\n" +
                              $"CSeq: 1\r\n" +
                              $"User-Agent: SentinelDiscovery/1.0\r\n\r\n";
 
@@ -110,11 +111,10 @@ public class RtspScanner
             }
             if (response.Contains("RTSP/1.0 401 Unauthorized"))
             {
+                // If OPTIONS requires auth, it's definitely an RTSP service
                 return (true, true);
             }
 
-            // Some cameras return 404 for DESCRIBE on / but 200 for OPTIONS.
-            // We only count it as "Found" if it's 200 or 401 (Auth required).
             return (false, false);
         }
         catch

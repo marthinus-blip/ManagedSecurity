@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\SharedFile.targets" />
   
   <PropertyGroup>
@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ManagedSecurity.Common\ManagedSecurity.Common.csproj" />
     <ProjectReference Include="..\ManagedSecurity.Discovery\ManagedSecurity.Discovery.csproj" />
+    <ProjectReference Include="..\ManagedSecurity.Core\ManagedSecurity.Core.csproj" />
   </ItemGroup>
 
 </Project>

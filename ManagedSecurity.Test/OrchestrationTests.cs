@@ -71,7 +71,7 @@ public class OrchestrationTests
         // Arrange
         var config = new OrchestrationConfig { HeartbeatInterval = TimeSpan.FromMilliseconds(50) };
         bool heartbeatReceived = false;
-        var guardian = new GuardianBehavior("test-scout", config, hb => {
+        var guardian = new GuardianBehavior("test-scout", config, onHeartbeat: hb => {
             heartbeatReceived = true;
         });
         var cts = new CancellationTokenSource();

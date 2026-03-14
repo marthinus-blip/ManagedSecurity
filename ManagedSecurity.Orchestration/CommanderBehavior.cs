@@ -27,7 +27,9 @@ public class CommanderBehavior : IAgentBehavior
 {
     public string Name => "Commander";
     private readonly OrchestrationConfig _config;
-    private readonly ConcurrentDictionary<string, DateTime> _activeWorkers = new();
+    public record ActiveAgent(string AgentId, DateTime LastSeen, float CpuLoad, int TaskCount);
+
+    private readonly ConcurrentDictionary<string, (DateTime Timestamp, float CpuLoad)> _activeWorkers = new();
     private readonly ConcurrentDictionary<string, DiscoveryResult> _unassignedCameras = new();
     private readonly ConcurrentDictionary<string, List<TaskLease>> _workerTasks = new();
     private readonly CameraStore? _store;
@@ -191,7 +193,17 @@ public class CommanderBehavior : IAgentBehavior
 
     public void ReceiveHeartbeat(HeartbeatMessage hb)
     {
-        _activeWorkers.AddOrUpdate(hb.AgentId, hb.Timestamp, (_, _) => hb.Timestamp);
+        _activeWorkers.AddOrUpdate(hb.AgentId, (hb.Timestamp, hb.CpuLoad), (_, _) => (hb.Timestamp, hb.CpuLoad));
+    }
+
+    public IEnumerable<ActiveAgent> GetActiveAgents()
+    {
+        return _activeWorkers.Select(kv => new ActiveAgent(
+            kv.Key, 
+            kv.Value.Timestamp, 
+            kv.Value.CpuLoad, 
+            _workerTasks.TryGetValue(kv.Key, out var tasks) ? tasks.Count : 0
+        ));
     }
 
     public void ReceiveAlert(GuardianActivityAlert alert)
@@ -204,7 +216,7 @@ public class CommanderBehavior : IAgentBehavior
     {
         var now = DateTime.UtcNow;
         var deadWorkers = _activeWorkers
-            .Where(w => now - w.Value > _config.WorkerTimeout)
+            .Where(w => now - w.Value.Timestamp > _config.WorkerTimeout)
             .Select(w => w.Key)
             .ToList();
 

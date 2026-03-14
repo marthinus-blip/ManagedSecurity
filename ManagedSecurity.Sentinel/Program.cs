@@ -813,6 +813,15 @@ class Program
                         await resp.OutputStream.WriteAsync(json);
                         resp.Close();
                     }
+                    else if (url.Equals("/api/agents", StringComparison.OrdinalIgnoreCase) && req.HttpMethod == "GET")
+                    {
+                        var agents = commander.GetActiveAgents().ToList();
+                        var options = new System.Text.Json.JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default };
+                        byte[] json = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(agents, options);
+                        resp.ContentType = "application/json";
+                        await resp.OutputStream.WriteAsync(json);
+                        resp.Close();
+                    }
                     else if (url == "/api/config/configure" && req.HttpMethod == "POST")
                     {
                         try 
@@ -1487,4 +1496,5 @@ internal class ConfigPayload
 [System.Text.Json.Serialization.JsonSerializable(typeof(SentinelConfig))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(OrchestrationConfig))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(StorageStats))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(List<ManagedSecurity.Orchestration.CommanderBehavior.ActiveAgent>))]
 internal partial class SentinelJsonContext : System.Text.Json.Serialization.JsonSerializerContext { }

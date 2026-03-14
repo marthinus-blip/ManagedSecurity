@@ -36,13 +36,21 @@ The system operates in a distributed hive model to ensure massive scalability.
 *   **Broad Workers**: Lean nodes (Raspberry Pi, low-power VMs) running the Guardian phase.
 *   **Narrow Workers**: GPU-accelerated nodes running deep inference.
 
-## 🧠 3. Zero-Copy Memory Management
+## 🧠 3. Zero-Copy & Feed Strategy Abstraction
 
-To avoid the "Memory Tax" during Narrow Phase analysis:
+To ensure extreme scalability without forcing low-power nodes into thermal throttling, the MV ingestion acts independently of the assigned Behavioral role (Guardian vs. Inquisitor) via an `IMachineVisionFeedStrategy`.
 
-1.  **Frame Hooks**: `ManagedSecurityStream` will implement an `OnFrameDecrypted` hook that provides a `ReadOnlySpan<byte>` pointing directly at the internal crypto buffer.
-2.  **Pointer-Based Inference**: Inference engines (TensorFlow Lite, ONNX Runtime) will be configured to "Peek" at these existing memory addresses without duplicating bits.
-3.  **HTTP Snapshots**: Broad phase bypasses the crypto pipeline entirely by fetching JPEGs from the camera's HTTP endpoint.
+### A. Branch Light (PollingSnapshotFeedStrategy)
+*   **Mechanism**: Safely queries the camera's `SnapshotUrl` (HTTP JPEG) periodically.
+*   **Target Hardware**: Edge Scouts (Raspberry Pi, lightweight VMs).
+*   **Benefit**: Avoids deploying H.264 decoders locally. The ASIC on the camera does the work.
+
+### B. Branch Heavy (DecryptedStreamFeedStrategy)
+*   **Mechanism**: A continuous, zero-copy pointer feed directly from the `ManagedSecurityStream.OnFrameDecrypted` event or a local GStreamer `appsink`.
+*   **Target Hardware**: Dedicated GPU Inquisitors (Remote or Local).
+*   **Benefit**: Provides a native-framerate `ReadOnlySpan<byte>` without duplicating bits in memory, dropping GC overhead out of the hot path for 30+ FPS tensor evaluations.
+
+Because of this abstraction, a Heavy node can run Guardian logic over a continuous feed if power allows, or an Inquisitor node bottlenecked by network could drop to Light mode to read snapshots. Behaviors simply request `await _feedStrategy.GetNextFrameAsync()`.
 
 ## 🚀 4. Implementation Milestone Phases
 

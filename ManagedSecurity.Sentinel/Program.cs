@@ -667,17 +667,33 @@ class Program
         store.SetOptions(new JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default, WriteIndented = true });
         
         var commander = role == "commander" || role == "both" ? new CommanderBehavior(config, store) : null;
+        var inquisitor = role == "scout" || role == "both" ? new ManagedSecurity.Orchestration.Engine.InquisitorBehavior(agent.Id, config, cipher) : null;
         var guardian = role == "scout" || role == "both" ? new GuardianBehavior(
             agent.Id, 
             config, 
             "http://localhost:5188",
             hb => commander?.ReceiveHeartbeat(hb),
-            alert => commander?.ReceiveAlert(alert),
+            alert => 
+            {
+                commander?.ReceiveAlert(alert);
+                // Escalate to Narrow Phase logic locally (zero-copy trigger)
+                if (inquisitor != null)
+                {
+                    // For now, construct a dummy DiscoveryResult or retrieve from a shared local pool.
+                    // This creates a targeted local escalation link between Guardian & Inquisitor.
+                    inquisitor.AcceptTarget(new DiscoveryResult("unknown", 0, null) { Url = alert.CameraUrl });
+                }
+            },
             cipher) : null;
 
         // Domain Discovery (Ghost Sentinel detection)
         var domain = new ManagedSecurity.Orchestration.DomainBehavior(agent.Id, version, role, new JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default });
         await agent.AddBehaviorAsync(domain);
+
+        if (inquisitor != null)
+        {
+            await agent.AddBehaviorAsync(inquisitor);
+        }
 
         if (commander != null)
         {

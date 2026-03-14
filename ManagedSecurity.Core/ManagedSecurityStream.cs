@@ -46,6 +46,10 @@ public class ManagedSecurityStream : Stream
     private static ReadOnlySpan<byte> StreamMagic => "MSG"u8;
     private const byte StreamVersion = 1;
 
+    // Zero-Copy Event Hook for Inquisitor Phase
+    public delegate void FrameDecryptedHandler(ReadOnlySpan<byte> frameData);
+    public event FrameDecryptedHandler? OnFrameDecrypted;
+
     public ManagedSecurityStream(
         Stream innerStream, 
         Cipher cipher, 
@@ -593,6 +597,9 @@ public class ManagedSecurityStream : Stream
         _readBufferOffset = headerSize;
         _readBufferCount = h.PayloadLength;
         _sequenceNumber++;
+
+        // Fire zero-copy hook
+        OnFrameDecrypted?.Invoke(_buffer.AsSpan(headerSize, h.PayloadLength));
     }
 
     private static int CalculateHeaderExtensions(uint hVal)

@@ -49,7 +49,7 @@ Antigravity Global Governance Rules
 
         Walkthrough: A brief narrative of the final result and how to test it.
 
-    Logging: Whe have a dedicated logger `SentinelLogger` with a `AiThought` log level. Use it!
+    Logging: Whe have a dedicated logger `SentinelLogger` and should be used for troubleshooting.
 
 5. DESIGN PHILOSOPHY (HARDCODED)
 

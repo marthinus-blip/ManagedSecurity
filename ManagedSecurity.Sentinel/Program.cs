@@ -650,7 +650,7 @@ class Program
             Console.WriteLine($"[SENTINEL] Created default config at {sentinelConfigPath}");
         }
 
-        LogLevel minLevel = Enum.TryParse<LogLevel>(sentinelConfig.LogLevel, true, out var result) ? result : LogLevel.Information;
+        LogLevel minLevel = sentinelConfig.LogLevel;
         using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(minLevel));
         SentinelLogger.Initialize(loggerFactory);
 
@@ -940,31 +940,8 @@ class Program
                 await TryCaptureSnapshot(ms, "test"); 
             }
 
-            byte[] capturedData = ms.ToArray();
-            
-            // [thought_gst_junk_stripping]((2026-03-14T19:45:00) (Stripping status messages like 'Setting pipeline to PAUSED' from stdout to prevent JPEG corruption.))
-            int jpegStart = -1;
-            for (int i = 0; i < capturedData.Length - 1; i++)
-            {
-                if (capturedData[i] == 0xFF && capturedData[i + 1] == 0xD8)
-                {
-                    jpegStart = i;
-                    break;
-                }
-            }
-
-            byte[] rawJpeg;
-            if (jpegStart >= 0)
-            {
-                rawJpeg = new byte[capturedData.Length - jpegStart];
-                Buffer.BlockCopy(capturedData, jpegStart, rawJpeg, 0, rawJpeg.Length);
-            }
-            else
-            {
-                rawJpeg = capturedData; // Fallback
-            }
-
-            Console.WriteLine($"[SNAPSHOT] Captured {rawJpeg.Length} bytes for {cameraId} (Stripped: {jpegStart})");
+            byte[] rawJpeg = ms.ToArray();
+            Console.WriteLine($"[SNAPSHOT] Captured {rawJpeg.Length} bytes for {cameraId}");
             
             // Encrypt the snapshot (Master Key Index = 0)
             byte[] encrypted = cipher.Encrypt(rawJpeg, 0); 
@@ -987,12 +964,12 @@ class Program
         if (url.ToLower().Contains("test") || url == "test")
         {
             // Use videotestsrc for simulator. Pattern=smpte provides color bars.
-            pipeline = "videotestsrc pattern=smpte num-buffers=1 ! video/x-raw,width=800,height=450 ! videoconvert ! jpegenc ! fdsink fd=1";
+            pipeline = "-q videotestsrc pattern=smpte num-buffers=1 ! video/x-raw,width=800,height=450 ! videoconvert ! jpegenc ! fdsink fd=1";
         }
         else 
         {
             // Use uridecodebin for real cameras. snapshot=true on jpegenc ensures one-frame capture.
-            pipeline = $"uridecodebin uri=\"{url}\" ! videoconvert ! videoscale ! video/x-raw,width=800,height=450 ! jpegenc snapshot=true ! fdsink fd=1";
+            pipeline = $"-q uridecodebin uri=\"{url}\" ! videoconvert ! videoscale ! video/x-raw,width=800,height=450 ! jpegenc snapshot=true ! fdsink fd=1";
         }
 
         var psi = new System.Diagnostics.ProcessStartInfo
@@ -1069,8 +1046,7 @@ class Program
 
             if (sourceUrl.ToLower().Contains("test") || sourceUrl.ToLower() == "test")
             {
-                // [thought_black_feed_fix]((2026-03-14T14:15:00) (Using fragmented MP4 with faststart-like behavior for non-seekable pipes.))
-                gstreamerCommand = "videotestsrc is-live=true pattern=ball " +
+                gstreamerCommand = "-q videotestsrc is-live=true pattern=ball " +
                     "! video/x-raw,width=800,height=600,framerate=25/1 " +
                     "! clockoverlay halignment=right valignment=bottom " +
                     "! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=ultrafast bframes=0 key-int-max=25 ! video/x-h264,profile=baseline " +
@@ -1079,7 +1055,7 @@ class Program
             }
             else if (sourceUrl.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase))
             {
-                gstreamerCommand = $"rtspsrc location=\"{authenticatedUrl}\" latency=200 protocols=tcp ! rtph264depay ! h264parse ! avdec_h264 " +
+                gstreamerCommand = $"-q rtspsrc location=\"{authenticatedUrl}\" latency=200 protocols=tcp ! rtph264depay ! h264parse ! avdec_h264 " +
                     "! videoconvert ! videoscale ! video/x-raw,width=800,height=600 " +
                     "! queue max-size-buffers=1 leaky=downstream ! x264enc tune=zerolatency bitrate=1200 speed-preset=ultrafast key-int-max=50 ! video/x-h264,profile=baseline " +
                     "! mp4mux streamable=true fragment-duration=200 " +
@@ -1087,7 +1063,7 @@ class Program
             }
             else
             {
-                gstreamerCommand = $"uridecodebin uri=\"{authenticatedUrl}\" " +
+                gstreamerCommand = $"-q uridecodebin uri=\"{authenticatedUrl}\" " +
                     "! videoconvert ! videoscale ! video/x-raw,width=800,height=600 " +
                     "! x264enc tune=zerolatency bitrate=1000 speed-preset=ultrafast key-int-max=50 ! video/x-h264,profile=baseline " +
                     "! mp4mux streamable=true fragment-duration=200 " +
@@ -1436,11 +1412,11 @@ class Program
                 string pipeline;
                 if (camera.Url.ToLower().Contains("test") || camera.Url == "test")
                 {
-                    pipeline = "videotestsrc is-live=true pattern=ball ! video/x-raw,width=800,height=600,framerate=25/1 ! clockoverlay ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=ultrafast bframes=0 ! video/x-h264 ! mp4mux streamable=true fragment-duration=100 ! fdsink fd=1";
+                    pipeline = "-q videotestsrc is-live=true pattern=ball ! video/x-raw,width=800,height=600,framerate=25/1 ! clockoverlay ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=ultrafast bframes=0 ! video/x-h264 ! mp4mux streamable=true fragment-duration=100 ! fdsink fd=1";
                 }
                 else 
                 {
-                    pipeline = $"uridecodebin uri=\"{camera.Url}\" ! videoconvert ! videoscale ! video/x-raw,width=800,height=600 ! x264enc tune=zerolatency bitrate=1200 speed-preset=ultrafast ! video/x-h264 ! mp4mux streamable=true fragment-duration=200 ! fdsink fd=1";
+                    pipeline = $"-q uridecodebin uri=\"{camera.Url}\" ! videoconvert ! videoscale ! video/x-raw,width=800,height=600 ! x264enc tune=zerolatency bitrate=1200 speed-preset=ultrafast ! video/x-h264 ! mp4mux streamable=true fragment-duration=200 ! fdsink fd=1";
                 }
 
                 var psi = new ProcessStartInfo
@@ -1448,12 +1424,20 @@ class Program
                     FileName = "gst-launch-1.0",
                     Arguments = pipeline,
                     RedirectStandardOutput = true,
+                    RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
 
                 using var process = Process.Start(psi);
                 if (process == null) break;
+
+                _ = Task.Run(async () => {
+                    var err = await process.StandardError.ReadToEndAsync();
+                    if (!string.IsNullOrEmpty(err) && (config.LogLevel == LogLevel.Debug || config.LogLevel == LogLevel.Trace)) {
+                        Console.WriteLine($"[RECORDER-GST-DIAG] {err}");
+                    }
+                });
 
                 // Close segment after 5 minutes or on cancellation
                 var segmentTimer = Task.Delay(TimeSpan.FromMinutes(5), ct);

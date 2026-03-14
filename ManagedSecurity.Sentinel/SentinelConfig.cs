@@ -1,12 +1,15 @@
 using System;
 using System.Text.Json.Serialization;
 
+using Microsoft.Extensions.Logging;
+
 namespace ManagedSecurity.Sentinel;
 
 public class SentinelConfig
 {
     [JsonPropertyName("log_level")]
-    public string LogLevel { get; set; } = "Information";
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
     [JsonPropertyName("vault_location")]
     public string VaultLocation { get; set; } = "Vault";

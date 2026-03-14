@@ -14,6 +14,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using ManagedSecurity.Common.Logging;
+using System.Collections.Concurrent;
+using System.Linq;
+using System.Diagnostics;
 
 namespace ManagedSecurity.Sentinel;
 
@@ -626,7 +629,29 @@ class Program
         
         Console.WriteLine($"[SENTINEL] Starting Agent v{version}...");
         
-        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Trace));
+        // Load Sentinel Config
+        string sentinelConfigPath = Path.GetFullPath(Paths.GetRuntimePath("sentinel.json"));
+        SentinelConfig sentinelConfig = new();
+        if (File.Exists(sentinelConfigPath))
+        {
+            try {
+                string json = File.ReadAllText(sentinelConfigPath);
+                sentinelConfig = JsonSerializer.Deserialize(json, SentinelJsonContext.Default.SentinelConfig) ?? new();
+                Console.WriteLine($"[SENTINEL] Config loaded from {sentinelConfigPath}");
+            } catch (Exception ex) {
+                Console.WriteLine($"[SENTINEL] Failed to load config: {ex.Message}. Using defaults.");
+            }
+        }
+        else
+        {
+            // [default_config_generation]((2026-03-14T18:25:00) (Creating default sentinel.json if not present to ensure Ground Truth configuration is visible.))
+            string defaultJson = JsonSerializer.Serialize(sentinelConfig, SentinelJsonContext.Default.SentinelConfig);
+            File.WriteAllText(sentinelConfigPath, defaultJson);
+            Console.WriteLine($"[SENTINEL] Created default config at {sentinelConfigPath}");
+        }
+
+        LogLevel minLevel = Enum.TryParse<LogLevel>(sentinelConfig.LogLevel, true, out var result) ? result : LogLevel.Information;
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(minLevel));
         SentinelLogger.Initialize(loggerFactory);
 
         byte[] key = DeriveKey(password);
@@ -701,7 +726,7 @@ class Program
         {
              _ = Task.Run(async () => {
                 try {
-                    await StartGovernorApiAsync(commander, user, password, agent.Id);
+                    await StartGovernorApiAsync(commander, user, password, agent.Id, sentinelConfig);
                 } catch (Exception ex) {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine($"[CRITICAL] Governor API failed to start: {ex.Message}");
@@ -713,7 +738,15 @@ class Program
         // Wait for cancellation
         var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (s, e) => { e.Cancel = true; cts.Cancel(); };
-        
+
+        // 3. Start Continuous Vault Recorders
+        if (sentinelConfig.EnableVaultRecording && commander != null)
+        {
+            _ = Task.Run(async () => {
+                await StartBackgroundRecordersAsync(commander, sentinelConfig, new Cipher(new SimpleKeyProvider(DeriveKey(password))), cts.Token);
+            }, cts.Token);
+        }
+
         try
         {
             await Task.Delay(-1, cts.Token);
@@ -725,9 +758,9 @@ class Program
         return 0;
     }
 
-    static async Task StartGovernorApiAsync(CommanderBehavior commander, string user, string pass, string agentId)
+    static async Task StartGovernorApiAsync(CommanderBehavior commander, string user, string pass, string agentId, SentinelConfig config)
     {
-        int port = 5188;
+        int port = config.GovernorPort;
         var listener = new HttpListener();
         listener.Prefixes.Add($"http://*:{port}/");
         listener.Start();
@@ -791,6 +824,53 @@ class Program
                         resp.StatusCode = 200;
                         resp.Close();
                     }
+                    else if (url.Equals("/api/vault/entries", StringComparison.OrdinalIgnoreCase) && req.HttpMethod == "GET")
+                    {
+                        string vaultDir = Path.IsPathRooted(config.VaultLocation) ? config.VaultLocation : Path.GetFullPath(Paths.GetRuntimePath(config.VaultLocation));
+                        var entries = VaultIndexer.ScanDirectory(vaultDir).ToList();
+                        
+                        foreach(var e in entries) {
+                            e.FullPath = $"http://localhost:5188/api/vault/fetch/{Uri.EscapeDataString(e.FileName)}";
+                        }
+
+                        var options = new JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default };
+                        byte[] json = JsonSerializer.SerializeToUtf8Bytes(entries, options);
+                        resp.ContentType = "application/json";
+                        await resp.OutputStream.WriteAsync(json);
+                        resp.Close();
+                    }
+                    else if (url.StartsWith("/api/vault/fetch/", StringComparison.OrdinalIgnoreCase) && req.HttpMethod == "GET")
+                    {
+                        string fileName = Uri.UnescapeDataString(url.Substring(17));
+                        string vaultDir = Path.IsPathRooted(config.VaultLocation) ? config.VaultLocation : Path.GetFullPath(Paths.GetRuntimePath(config.VaultLocation));
+                        string fullPath = Path.Combine(vaultDir, fileName);
+
+                        if (File.Exists(fullPath))
+                        {
+                            resp.ContentType = "application/octet-stream";
+                            resp.ContentLength64 = new FileInfo(fullPath).Length;
+                            using var fs = File.OpenRead(fullPath);
+                            await fs.CopyToAsync(resp.OutputStream);
+                        }
+                        else
+                        {
+                            resp.StatusCode = 404;
+                        }
+                        resp.Close();
+                    }
+                    else if (url.Equals("/api/system/storage", StringComparison.OrdinalIgnoreCase) && req.HttpMethod == "GET")
+                    {
+                        string vaultDir = Path.IsPathRooted(config.VaultLocation) ? config.VaultLocation : Path.GetFullPath(Paths.GetRuntimePath(config.VaultLocation));
+                        long used = VaultIndexer.GetTotalVaultSize(vaultDir);
+                        int files = Directory.Exists(vaultDir) ? Directory.GetFiles(vaultDir, "*.msg").Length : 0;
+                        var stats = new StorageStats(used, (long)(config.StorageQuotaGb * 1024 * 1024 * 1024), files);
+                        
+                        var options = new JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default };
+                        byte[] json = JsonSerializer.SerializeToUtf8Bytes(stats, options);
+                        resp.ContentType = "application/json";
+                        await resp.OutputStream.WriteAsync(json);
+                        resp.Close();
+                    }
                     else if (url.StartsWith("/api/snapshot/", StringComparison.OrdinalIgnoreCase) && req.HttpMethod == "GET")
                     {
                         string cameraId = url.Substring(14).TrimEnd('/');
@@ -823,7 +903,7 @@ class Program
                         }
 
                         bool needsAuth = cam.RequiresAuth;
-                        await HandleLiveStreamRequest(context, cam.Url, cam.DisplayName ?? cam.Id, needsAuth ? user : null, needsAuth ? pass : null, cipher);
+                        await HandleLiveStreamRequest(context, cam.Url, cam.DisplayName ?? cam.Id, needsAuth ? user : null, needsAuth ? pass : null, cipher, config);
                     }
                     else
                     {
@@ -860,8 +940,31 @@ class Program
                 await TryCaptureSnapshot(ms, "test"); 
             }
 
-            byte[] rawJpeg = ms.ToArray();
-            Console.WriteLine($"[SNAPSHOT] Captured {rawJpeg.Length} bytes for {cameraId}");
+            byte[] capturedData = ms.ToArray();
+            
+            // [thought_gst_junk_stripping]((2026-03-14T19:45:00) (Stripping status messages like 'Setting pipeline to PAUSED' from stdout to prevent JPEG corruption.))
+            int jpegStart = -1;
+            for (int i = 0; i < capturedData.Length - 1; i++)
+            {
+                if (capturedData[i] == 0xFF && capturedData[i + 1] == 0xD8)
+                {
+                    jpegStart = i;
+                    break;
+                }
+            }
+
+            byte[] rawJpeg;
+            if (jpegStart >= 0)
+            {
+                rawJpeg = new byte[capturedData.Length - jpegStart];
+                Buffer.BlockCopy(capturedData, jpegStart, rawJpeg, 0, rawJpeg.Length);
+            }
+            else
+            {
+                rawJpeg = capturedData; // Fallback
+            }
+
+            Console.WriteLine($"[SNAPSHOT] Captured {rawJpeg.Length} bytes for {cameraId} (Stripped: {jpegStart})");
             
             // Encrypt the snapshot (Master Key Index = 0)
             byte[] encrypted = cipher.Encrypt(rawJpeg, 0); 
@@ -883,12 +986,13 @@ class Program
         string pipeline;
         if (url.ToLower().Contains("test") || url == "test")
         {
-            pipeline = "videotestsrc num-buffers=1 pattern=smpte ! video/x-raw,width=800,height=450 ! jpegenc ! fdsink fd=1";
+            // Use videotestsrc for simulator. Pattern=smpte provides color bars.
+            pipeline = "videotestsrc pattern=smpte num-buffers=1 ! video/x-raw,width=800,height=450 ! videoconvert ! jpegenc ! fdsink fd=1";
         }
         else 
         {
-            // Use a short timeout for uridecodebin and grab the first frame
-            pipeline = $"uridecodebin uri=\"{url}\" connection-speed=1000 ! videoconvert ! videoscale ! video/x-raw,width=800,height=450 ! jpegenc snapshot=true ! fdsink fd=1";
+            // Use uridecodebin for real cameras. snapshot=true on jpegenc ensures one-frame capture.
+            pipeline = $"uridecodebin uri=\"{url}\" ! videoconvert ! videoscale ! video/x-raw,width=800,height=450 ! jpegenc snapshot=true ! fdsink fd=1";
         }
 
         var psi = new System.Diagnostics.ProcessStartInfo
@@ -929,10 +1033,9 @@ class Program
         }
 
         return false;
-        return false;
     }
 
-    static async Task HandleLiveStreamRequest(HttpListenerContext context, string sourceUrl, string cameraId, string? user, string? pass, Cipher cipher)
+    static async Task HandleLiveStreamRequest(HttpListenerContext context, string sourceUrl, string cameraId, string? user, string? pass, Cipher cipher, SentinelConfig config)
     {
         try
         {
@@ -1018,43 +1121,84 @@ class Program
                 int totalRead = 0;
                 MemoryStream headerBuffer = new MemoryStream();
 
-                while ((read = await gstStream.ReadAsync(buffer)) > 0)
-                {
-                    totalRead += read;
-                    
-                    if (firstChunk)
+                // --- [Vault Recording Logic] ---
+                    ManagedSecurityStream? vaultStream = null;
+                    if (config.EnableVaultRecording)
                     {
-                        // [thought_mse_initialization]((2026-03-14T14:25:00) (Buffering first 16KB to ensure complete MP4 Init Segment delivery.))
-                        if (totalRead < 16384)
+                        try 
                         {
-                            await headerBuffer.WriteAsync(buffer.AsMemory(0, read));
-                            continue; 
+                            string vaultDir = Path.IsPathRooted(config.VaultLocation) ? config.VaultLocation : Path.GetFullPath(Paths.GetRuntimePath(config.VaultLocation));
+                            if (!Directory.Exists(vaultDir)) Directory.CreateDirectory(vaultDir);
+
+                            long currentSize = VaultIndexer.GetTotalVaultSize(vaultDir);
+                            if (currentSize < (long)(config.StorageQuotaGb * 1024 * 1024 * 1024))
+                            {
+                                string fileName = $"Sentinel_{cameraId}_{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss}.msg";
+                                string fullPath = Path.Combine(vaultDir, fileName);
+                                var fs = File.Create(fullPath);
+                                vaultStream = new ManagedSecurityStream(fs, cipher, ManagedSecurityStreamMode.Encrypt, metadata: Encoding.UTF8.GetBytes(meta));
+                                Console.WriteLine($"[VAULT] Recording active: {fileName}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"[VAULT] Storage quota exceeded ({config.StorageQuotaGb} GB). Recording disabled.");
+                            }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            await headerBuffer.WriteAsync(buffer.AsMemory(0, read));
-                            byte[] initialData = headerBuffer.ToArray();
-                            Console.WriteLine($"[LIVE] Flushing Init Segment: {initialData.Length} bytes");
-                            await cryptoStream.WriteAsync(initialData);
-                            await cryptoStream.FlushToFrameAsync();
-                            await responseStream.FlushAsync();
-                            firstChunk = false;
-                            continue;
+                            Console.WriteLine($"[VAULT] Failed to initialize persistent stream: {ex.Message}");
                         }
                     }
 
                     try 
                     {
-                        await cryptoStream.WriteAsync(buffer.AsMemory(0, read));
-                        await cryptoStream.FlushToFrameAsync();
-                        await responseStream.FlushAsync();
+                        while ((read = await gstStream.ReadAsync(buffer)) > 0)
+                        {
+                            totalRead += read;
+                            
+                            if (firstChunk)
+                            {
+                                // [thought_mse_initialization]((2026-03-14T14:25:00) (Buffering first 16KB to ensure complete MP4 Init Segment delivery.))
+                                if (totalRead < 16384)
+                                {
+                                    await headerBuffer.WriteAsync(buffer.AsMemory(0, read));
+                                    continue; 
+                                }
+                                else
+                                {
+                                    await headerBuffer.WriteAsync(buffer.AsMemory(0, read));
+                                    byte[] initialData = headerBuffer.ToArray();
+                                    Console.WriteLine($"[LIVE] Flushing Init Segment: {initialData.Length} bytes");
+                                    await cryptoStream.WriteAsync(initialData);
+                                    if (vaultStream != null) await vaultStream.WriteAsync(initialData);
+
+                                    await cryptoStream.FlushToFrameAsync();
+                                    if (vaultStream != null) await vaultStream.FlushToFrameAsync();
+
+                                    await responseStream.FlushAsync();
+                                    firstChunk = false;
+                                    continue;
+                                }
+                            }
+
+                            await cryptoStream.WriteAsync(buffer.AsMemory(0, read));
+                            if (vaultStream != null) await vaultStream.WriteAsync(buffer.AsMemory(0, read));
+
+                            await cryptoStream.FlushToFrameAsync();
+                            if (vaultStream != null) await vaultStream.FlushToFrameAsync();
+
+                            await responseStream.FlushAsync();
+                        }
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine($"[LIVE] Client disconnected or socket failure: {ex.Message}");
-                        break; 
                     }
-                }
+                    finally
+                    {
+                        vaultStream?.Dispose();
+                        Console.WriteLine("[VAULT] Recording finalized.");
+                    }
 
                 try { process.Kill(); } catch { }
             }
@@ -1221,13 +1365,115 @@ class Program
         public ReadOnlyMemory<byte> GetKey(int keyIndex) => _key;
     }
 
-    static async Task<int> DoOnvifDiag(string[] args)
+    public static async Task<int> DoOnvifDiag(string[] args)
     {
         await OnvifDiagnostic.RunProbe();
         await OnvifDiagnostic.QueryStreamUri("192.168.8.23", "admin", "admin");
         return 0;
     }
+
+    static async Task StartBackgroundRecordersAsync(CommanderBehavior commander, SentinelConfig config, Cipher cipher, CancellationToken ct)
+    {
+        Console.WriteLine("[RECORDER] Continuous background recording active.");
+        var activeRecorders = new ConcurrentDictionary<string, CancellationTokenSource>();
+
+        while (!ct.IsCancellationRequested)
+        {
+            var cameras = commander.GetCameras().Where(c => c.IsConfigured).ToList();
+            foreach (var cam in cameras)
+            {
+                if (!activeRecorders.ContainsKey(cam.Id))
+                {
+                    var recorderCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    if (activeRecorders.TryAdd(cam.Id, recorderCts))
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try {
+                                await RecordCameraLoopAsync(cam, config, cipher, recorderCts.Token);
+                            }
+                            catch (Exception ex) {
+                                Console.WriteLine($"[RECORDER] Fatal error for {cam.DisplayName}: {ex.Message}");
+                            }
+                            finally {
+                                activeRecorders.TryRemove(cam.Id, out _);
+                            }
+                        }, ct);
+                    }
+                }
+            }
+            await Task.Delay(TimeSpan.FromSeconds(30), ct);
+        }
+    }
+
+    static async Task RecordCameraLoopAsync(DiscoveryResult camera, SentinelConfig config, Cipher cipher, CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try 
+            {
+                string vaultDir = Path.IsPathRooted(config.VaultLocation) ? config.VaultLocation : Path.GetFullPath(Paths.GetRuntimePath(config.VaultLocation));
+                if (!Directory.Exists(vaultDir)) Directory.CreateDirectory(vaultDir);
+
+                long currentSize = VaultIndexer.GetTotalVaultSize(vaultDir);
+                if (currentSize >= (long)(config.StorageQuotaGb * 1024 * 1024 * 1024))
+                {
+                    if (ct.IsCancellationRequested) break;
+                    await Task.Delay(TimeSpan.FromMinutes(1), ct);
+                    continue;
+                }
+
+                string safeName = camera.DisplayName.Replace(" ", "_").Replace("/", "_").Replace("\\", "_");
+                string fileName = $"Sentinel_{safeName}_{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss}.msg";
+                string fullPath = Path.Combine(vaultDir, fileName);
+                string meta = $"CameraID={camera.Id};DisplayName={camera.DisplayName};StartTime={DateTimeOffset.UtcNow:O}";
+                
+                Console.WriteLine($"[RECORDER] Starting segment: {fileName}");
+
+                using var fs = File.Create(fullPath);
+                using var vaultStream = new ManagedSecurityStream(fs, cipher, ManagedSecurityStreamMode.Encrypt, metadata: Encoding.UTF8.GetBytes(meta));
+
+                string pipeline;
+                if (camera.Url.ToLower().Contains("test") || camera.Url == "test")
+                {
+                    pipeline = "videotestsrc is-live=true pattern=ball ! video/x-raw,width=800,height=600,framerate=25/1 ! clockoverlay ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=ultrafast bframes=0 ! video/x-h264 ! mp4mux streamable=true fragment-duration=100 ! fdsink fd=1";
+                }
+                else 
+                {
+                    pipeline = $"uridecodebin uri=\"{camera.Url}\" ! videoconvert ! videoscale ! video/x-raw,width=800,height=600 ! x264enc tune=zerolatency bitrate=1200 speed-preset=ultrafast ! video/x-h264 ! mp4mux streamable=true fragment-duration=200 ! fdsink fd=1";
+                }
+
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "gst-launch-1.0",
+                    Arguments = pipeline,
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(psi);
+                if (process == null) break;
+
+                // Close segment after 5 minutes or on cancellation
+                var segmentTimer = Task.Delay(TimeSpan.FromMinutes(5), ct);
+                var copyTask = process.StandardOutput.BaseStream.CopyToAsync(vaultStream, ct);
+
+                await Task.WhenAny(segmentTimer, copyTask);
+                
+                try { process.Kill(); } catch { }
+                Console.WriteLine($"[RECORDER] Segment complete: {fileName}");
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException))
+            {
+                Console.WriteLine($"[RECORDER] Error recording {camera.DisplayName}: {ex.Message}");
+                await Task.Delay(TimeSpan.FromSeconds(10), ct);
+            }
+        }
+    }
 }
+
+public record StorageStats(long UsedBytes, long QuotaBytes, int TotalFiles);
 
 internal class ConfigPayload
 {
@@ -1238,6 +1484,7 @@ internal class ConfigPayload
 [System.Text.Json.Serialization.JsonSerializable(typeof(List<VaultEntry>))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(List<DiscoveryResult>))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(DiscoveryResult))]
-[System.Text.Json.Serialization.JsonSerializable(typeof(ConfigPayload))]
-[System.Text.Json.Serialization.JsonSerializable(typeof(ManagedSecurity.Orchestration.DomainBehavior.PeerAnnouncement))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(SentinelConfig))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(OrchestrationConfig))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(StorageStats))]
 internal partial class SentinelJsonContext : System.Text.Json.Serialization.JsonSerializerContext { }

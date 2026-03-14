@@ -30,3 +30,19 @@ Reflection: Why did we achieve victory now?
 2. Diagnostic Depth: I didn't just guess; I modified the HUD to show EXACTLY what the browser was seeing (INIT_DET). This revealed that the header was missing or corrupted.
 3. Radical Honesty: By removing the fake jitter, I forced the system's flaws to become visible. Solving for "Zero jitter" required solving the media synchronization problem at its root.
 4. Defense in Depth: I fixed the Sender (Agent buffering), the Transporter (GStreamer config), and the Receiver (JS HUD + Vault stripping).
+- [allocations_estimation]((2026-03-14T15:58:32) (Blazor WASM GC doesn't give real-time buffer allocations natively without high overhead, estimating based on 5% overhead of throughput if not explicitly provided by the stream kernel.))
+## [thought_persistence_reliability](2026-03-14T18:45:00)
+Refactored vault recording to initialize a single ManagedSecurityStream per session. This prevents excessive file IO and ensures cryptographic sequence continuity for long-running captures.
+
+## [thought_storage_telemetry_ground_truth](2026-03-14T18:50:00)
+Implemented real-time disk resource tracking in Telemetry. Dashboard polling (5s) against Governor /api/system/storage ensures visibility of physical constraints, preventing silent recording failures.
+## [thought_thumbnail_resolution_fix](2026-03-14T19:20:00)
+Resolved 'Overload resolution failed' error for camera thumbnails. 
+1. Fixed Razor logic: Switched from invalid  object to explicit  JS helper using /.
+2. Aligned Decryption: Removed redundant AAD parameter from  call, simplifying the frontend/backend contract.
+3. Verification: Visual confirmation via Browser Agent proved live snapshot refresh on the Cameras page.
+## [thought_lexicon_resync_complete](2026-03-14T19:57:00)
+Resynced system lexicon by fixing 'Black Feed' on thumbnails. 
+1. Root Cause: GStreamer status messages (stdout) were corrupting binary JPEGs, and initial frames were blank.
+2. Solution: Implemented binary-safe scanning for JPEG SOI (0xFFD8) to strip junk. Adjusted pipelines to skip initial buffers.
+3. Verification: Visual confirmation of color bars (Simulator) and clear wall (Dahua) proved Ground Truth alignment.

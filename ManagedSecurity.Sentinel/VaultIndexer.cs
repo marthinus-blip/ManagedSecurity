@@ -94,4 +94,11 @@ public static class VaultIndexer
             }
         }
     }
+
+    public static long GetTotalVaultSize(string path)
+    {
+        if (!Directory.Exists(path)) return 0;
+        return Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories)
+            .Sum(f => new FileInfo(f).Length);
+    }
 }

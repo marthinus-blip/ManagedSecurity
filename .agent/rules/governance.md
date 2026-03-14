@@ -32,6 +32,8 @@ Antigravity Global Governance Rules
 
     Magic Strings: Never hard code strings. These values should be obtained from a sensible configuration, or if it makes sense (e.g. not just convenient) -- then use hard coded constants instead
 
+    Magic Values: As stated, configs should be the source of truth. If there is no specified config for a particular value(s), then compile a list of these values and prmpt the user for (clerification/config sugestions).
+
 4. VERIFICATION & ARTIFACTS
     Tone: Be sceptical when verifying. Make sure that reported values are **Grounded In Truth**, and be on the look out for "magic values". All data must originate from actual samples and any hard coded vaule must be rejected. If something does not seem correct, then varify that the origin of the data is acutal.
 

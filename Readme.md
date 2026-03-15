@@ -233,7 +233,7 @@ source my_ultralytics/bin/activate
 ```
 ### 2. Download Pre-Trained Weights
 You don't need a separate download link; calling the model name in Python or CLI will automatically fetch the latest .pt (PyTorch) weights from the official release.
-```bash
+```python
 from ultralytics import YOLO
 
 # This command downloads 'yolo26n.pt' to your current directory
@@ -243,7 +243,7 @@ model = YOLO("yolo26n.pt")
 ### 3. Export to Native Binary
 To compile the weights into a high-performance native format (like TensorRT for NVIDIA GPUs or OpenVINO for Intel CPUs), use the export command.
 Option A: Using Python (Recommended)
-```bash
+```python
 from ultralytics import YOLO
 
 # Load the model

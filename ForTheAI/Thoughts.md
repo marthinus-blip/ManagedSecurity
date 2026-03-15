@@ -165,3 +165,13 @@ Resynced system lexicon by fixing 'Black Feed' on thumbnails.
 > Under POSIX systems (Linux/macOS), the runtime's dynamic library loader automatically prepends `lib` and appends `.so`/`.dylib` when a base name is provided to a `[DllImport]` or `NativeLibrary.Load()` call. This allows .NET to remain cross-platform (loading `sentinel_yolo26_core.dll` on Windows vs `sentinel_yolo26_core.so` on Linux).
 > 
 > However, to adhere to the `governance.md` ruling regarding Magic Strings and defensive typing, a `const string NativeLibraryName = "sentinel_yolo26_core"` was declared. This constant is now utilized consistently in `[LibraryImport]` declarations, runtime loading probes, and fallback Telemetry alerts to ensure `Ground Truth` logging reflects the exact cross-platform token being loaded, removing any confusion.
+
+## [thought_logger_zero_allocation_enforcement]((2026-03-15T21:20:00) (Why: Undoing an arbitrary ILogger injection that caused memory bloat and allocation penalties on the hot path.))
+> The USER wisely corrected an architectural mistake: passing `ILogger` into the constructor and utilizing `_logger.LogDebug($"...")`.
+> 
+> What was violated?
+> 1. **Allocation on the Hot Path (String Format Boxing)**: `ILogger.LogDebug($"something {var}")` performs string interpolation and heap allocation *regardless* of whether the debug log level is even enabled. Our `SentinelLogger` utilizes the modern `[LoggerMessage]` source generation, which explicitly checks `IsEnabled(LogLevel)` before generating any string parameters, guaranteeing zero-allocation if the event is muted.
+> 2. **Object Memory Bloat**: Injecting `ILogger` created an unnecessary reference field inside the class instance. 
+> 3. **Semantic Ground Truth**: Relying on arbitrary `LogDebug`/`LogError` strings loses the standardized EventId categorization (`[HEARTBEAT] 100`, `[NO SIGNAL] 500`) carefully defined in `SentinelLogger`, breaking the `Verifiable Truth` aesthetic formatting.
+> 
+> Actions taken: Reverted the `ILogger` injection and returned to strictly using `SentinelLogger.Heartbeat` / `SentinelLogger.NoSignal` static generation.

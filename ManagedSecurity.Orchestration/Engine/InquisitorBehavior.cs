@@ -31,7 +31,7 @@ public class InquisitorBehavior : IAgentBehavior
         _agentId = agentId;
         _config = config;
         _cipher = cipher;
-        _yoloEngine = yoloEngine ?? new Yolo26InferenceEngine(config, ManagedSecurity.Common.Logging.SentinelLogger.CreateLogger<Yolo26InferenceEngine>());
+        _yoloEngine = yoloEngine ?? new Yolo26InferenceEngine(config);
     }
 
     public Task StartAsync(CancellationToken ct)

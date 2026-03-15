@@ -930,6 +930,51 @@ class Program
                         bool needsAuth = cam.RequiresAuth;
                         await HandleLiveStreamRequest(context, cam.Url, cam.DisplayName ?? cam.Id, needsAuth ? user : null, needsAuth ? pass : null, cipher, config);
                     }
+                    else if (url.StartsWith("/api/telemetry/", StringComparison.OrdinalIgnoreCase) && req.HttpMethod == "GET")
+                    {
+                        string cameraId = url.Substring(15).TrimEnd('/');
+                        resp.ContentType = "text/event-stream";
+                        resp.Headers.Add("Cache-Control", "no-cache");
+                        resp.Headers.Add("Connection", "keep-alive");
+                        // Access-Control-Allow-Origin is already added globally by StartGovernorApiAsync
+                        resp.SendChunked = false;
+
+                        var writer = new StreamWriter(resp.OutputStream, new UTF8Encoding(false));
+                        
+                        void HandleTele(ManagedSecurity.Common.Models.InferenceTelemetryEvent e)
+                        {
+                            if (e.CameraId == cameraId || cameraId == "all")
+                            {
+                                try {
+                                    var json = JsonSerializer.Serialize(e, SentinelJsonContext.Default.InferenceTelemetryEvent);
+                                    lock (writer) {
+                                        writer.WriteLine($"data: {json}\n");
+                                        writer.Flush();
+                                    }
+                                } catch { }
+                            }
+                        }
+                        
+                        ManagedSecurity.Orchestration.Engine.InquisitorBehavior.OnTelemetryEmitted += HandleTele;
+                        
+                        try
+                        {
+                            while (true) // Run until client disconnects and throws
+                            {
+                                lock (writer) {
+                                    writer.WriteLine(":\n");
+                                    writer.Flush();
+                                }
+                                await Task.Delay(2000);
+                            }
+                        }
+                        catch { }
+                        finally
+                        {
+                            ManagedSecurity.Orchestration.Engine.InquisitorBehavior.OnTelemetryEmitted -= HandleTele;
+                            resp.Close();
+                        }
+                    }
                     else
                     {
                         resp.StatusCode = 404;
@@ -1434,6 +1479,27 @@ class Program
                 using var fs = File.Create(fullPath);
                 using var vaultStream = new ManagedSecurityStream(fs, cipher, ManagedSecurityStreamMode.Encrypt, metadata: Encoding.UTF8.GetBytes(meta));
 
+                string teleFileName = fileName.Replace(".msg", ".telemetry.jsonl");
+                string telePath = Path.Combine(vaultDir, teleFileName);
+                using var teleFs = new FileStream(telePath, FileMode.Create, FileAccess.Write, FileShare.Read);
+                using var teleWriter = new StreamWriter(teleFs, Encoding.UTF8, 1024, leaveOpen: true);
+                
+                void RecordTelemetry(ManagedSecurity.Common.Models.InferenceTelemetryEvent e) 
+                {
+                    if (e.CameraId == camera.Id) 
+                    {
+                        try {
+                            var json = System.Text.Json.JsonSerializer.Serialize(e, SentinelJsonContext.Default.InferenceTelemetryEvent);
+                            lock(teleWriter) {
+                                teleWriter.WriteLine(json);
+                                teleWriter.Flush();
+                            }
+                        } catch { }
+                    }
+                }
+                
+                ManagedSecurity.Orchestration.Engine.InquisitorBehavior.OnTelemetryEmitted += RecordTelemetry;
+
                 string pipeline;
                 if (camera.Url.ToLower().Contains("test") || camera.Url == "test")
                 {
@@ -1470,6 +1536,8 @@ class Program
 
                 await Task.WhenAny(segmentTimer, copyTask);
                 
+                ManagedSecurity.Orchestration.Engine.InquisitorBehavior.OnTelemetryEmitted -= RecordTelemetry;
+                
                 try { process.Kill(); } catch { }
                 Console.WriteLine($"[RECORDER] Segment complete: {fileName}");
             }
@@ -1497,4 +1565,6 @@ internal class ConfigPayload
 [System.Text.Json.Serialization.JsonSerializable(typeof(OrchestrationConfig))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(StorageStats))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(List<ManagedSecurity.Orchestration.CommanderBehavior.ActiveAgent>))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(ManagedSecurity.Common.Models.InferenceTelemetryEvent))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(ManagedSecurity.Common.Models.BoundingBox))]
 internal partial class SentinelJsonContext : System.Text.Json.Serialization.JsonSerializerContext { }

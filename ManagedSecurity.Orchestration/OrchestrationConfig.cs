@@ -23,4 +23,9 @@ public class OrchestrationConfig
     /// Max time allowed since last heartbeat before a Scout is considered "KIA" (Killed in Action).
     /// </summary>
     public TimeSpan WorkerTimeout { get; set; } = TimeSpan.FromSeconds(45);
+
+    /// <summary>
+    /// Minimum confidence threshold for YOLO detections to be considered valid hits.
+    /// </summary>
+    public float YoloConfidenceThreshold { get; set; } = 0.65f;
 }

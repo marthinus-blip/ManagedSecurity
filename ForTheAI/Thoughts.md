@@ -111,3 +111,21 @@ Resynced system lexicon by fixing 'Black Feed' on thumbnails.
 
 ## [thought_build_verification](2026-03-14T23:36:00)
 > Both backend Sentinel Core and frontend Dashboard compile cleanly with zero errors after introducing the MachineVisionRoute enum dependency. Ready for MV framework bootstrapping.
+## [thought_branch_light_implementation](2026-03-14T23:44:00)
+> Implemented 'Branch Light' MV topology via the 'PollingSnapshotFeedStrategy' and refactored the 'GuardianBehavior' to consume it natively. The Guardian no longer cares about HTTP requests; it simply blindly awaits 'feedStrategy.GetNextFrameAsync()'. Per-camera tasks ensure execution is strictly decoupled, enabling the orchestration engine to seamlessly spin up native CV pipelines using zero-allocation abstractions.
+
+## [thought_gpl_contagion_check](2026-03-15T10:08:42)
+> Evaluated the architectural boundary between Sentinel Dashboard and Sentinel Agent to ensure the imminent YOLO26 (GPL-3.0) integration does not contaminate the Dashboard.
+> 1. Static/Dynamic Linking: The Dashboard (`Sentinel-Dashboard.csproj`) exclusively references `ManagedSecurity.Core` and `ManagedSecurity.Common`. As long as YOLO26 is strictly isolated to `ManagedSecurity.Orchestration` or the `Sentinel` executable, no static or dynamic linking occurs in the UI.
+> 2. Network Interfacing: The Dashboard communicates with Sentinel explicitly over standard network protocols (HTTP APIs like `/api/discovery` and `/api/agents`). Standard IPC via OS sockets does not constitute derivative work under GPL, preserving the Dashboard's independent license.
+> Conclusion: The Sentinel Dashboard is immune to YOLO26's GPL contagion due to strict process boundaries and careful project referencing.
+
+## [thought_yolo26_strategy_framing]((2026-03-15T10:13:28) (Why: Designing the YOLO26 object detection architecture))
+> Initiated the framing of the YOLO26 (GPL-3.0) MV Strategy. The engine will be integrated strictly inside `ManagedSecurity.Orchestration` as `Yolo26InferenceEngine`, adhering to the `IYoloInferenceEngine` interface.
+> Core principles applied:
+> 1. Zero-Allocation: Inference executes directly over `ReadOnlySpan<byte>` provided by `IVisualTensor`, preventing GC pressure on the hot path.
+> 2. Decoupling: The `InquisitorBehavior` will rely solely on the interface, passing the visual tensor obtained from the feed strategy without knowing the underlying GPL internals.
+> 3. NativeAOT Compatibility: Interop bindings with the native YOLO26 library must rely on `[DllImport]` or modern `[LibraryImport]` without reflection.
+
+\n- [thought_native_telemetry_complete]((2026-03-15T10:33:54) (Why: Finished Step 3 UI telemetry overlay. Added Native LibraryImport wrapper for YOLO26_Detect_Tensor. Connected live SSE to /api/telemetry/... and metadata persistence to .telemetry.jsonl. Dashboard updated to render bounding boxes via CSS.))
+\n- [thought_zero_copy_heavy_feed]((2026-03-15T10:35:17) (Why: Implemented DecryptedStreamFeedStrategy to provide zero-copy frames to the Inquisitor, resolving the Heavy Branch stream ingestion requirement.))

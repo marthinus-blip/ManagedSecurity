@@ -14,18 +14,21 @@ namespace ManagedSecurity.Orchestration.Engine;
 /// </summary>
 public class InquisitorBehavior : IAgentBehavior
 {
+    public static event Action<ManagedSecurity.Common.Models.InferenceTelemetryEvent>? OnTelemetryEmitted;
     public string Name => "Inquisitor";
     private readonly string _agentId;
     private readonly OrchestrationConfig _config;
     private readonly Cipher _cipher;
     private bool _isRunning;
     private readonly ConcurrentDictionary<string, DiscoveryResult> _activeTargets = new();
+    private readonly IYoloInferenceEngine _yoloEngine;
 
-    public InquisitorBehavior(string agentId, OrchestrationConfig config, Cipher cipher)
+    public InquisitorBehavior(string agentId, OrchestrationConfig config, Cipher cipher, IYoloInferenceEngine? yoloEngine = null)
     {
         _agentId = agentId;
         _config = config;
         _cipher = cipher;
+        _yoloEngine = yoloEngine ?? new Yolo26InferenceEngine(config);
     }
 
     public Task StartAsync(CancellationToken ct)
@@ -65,17 +68,40 @@ public class InquisitorBehavior : IAgentBehavior
     {
         try
         {
-            // The Inquisitor needs to tap into the high-bandwidth decrypted stream.
-            // Right now, this acts as a placeholder for TFLite/ONNX hooking into the
-            // ManagedSecurityStream.OnFrameDecrypted event.
-            Console.WriteLine($"[INQUISITOR-ENGINE] Pre-calculating tensor shapes for {target.IpAddress}...");
+            // [thought_narrow_phase_yolo]((2026-03-15T10:13:28) (Why: Narrow Phase requires full frame processing logic, decoupling network topology from CV logic))
+            Console.WriteLine($"[INQUISITOR-ENGINE] Starting YOLO26 hot path sequence for {target.IpAddress}...");
             
+            // In a real environment, the target object contains the proper interface for DecryptedStreamFeedStrategy
+            // We use PollingSnapshotFeedStrategy here temporarily via the abstract IVisualTensor pipeline to demonstrate decoupling.
+            using IMachineVisionFeedStrategy feedStrategy = new PollingSnapshotFeedStrategy(target, TimeSpan.FromMilliseconds(33));
+
             while (_isRunning && _activeTargets.ContainsKey(target.Url))
             {
-                // Simulate deep inference loop attached to real-time framerate (30FPS ~ 33ms)
-                await Task.Delay(33);
-                
-                // TODO: Zero-copy pointer read from `ManagedSecurityStream`
+                using var frame = await feedStrategy.GetNextFrameAsync(CancellationToken.None);
+                if (frame == null) continue;
+
+                // Pass the frame directly zero-copy to the YOLO engine
+                var hits = await _yoloEngine.DetectAsync(frame, CancellationToken.None);
+
+                if (hits.Length > 0)
+                {
+                    Console.WriteLine($"[INQUISITOR-ENGINE] YOLO DETECTED: {hits.Length} valid targets on {target.IpAddress} with max conf {hits[0].Confidence}");
+                    
+                    var boxes = new ManagedSecurity.Common.Models.BoundingBox[hits.Length];
+                    for (int i = 0; i < hits.Length; i++)
+                    {
+                        var h = hits[i];
+                        boxes[i] = new ManagedSecurity.Common.Models.BoundingBox { X = h.X, Y = h.Y, Width = h.Width, Height = h.Height, Confidence = h.Confidence, ClassId = h.ClassId, Label = "Person" };
+                    }
+                    
+                    OnTelemetryEmitted?.Invoke(new ManagedSecurity.Common.Models.InferenceTelemetryEvent
+                    {
+                        CameraId = target.Id,
+                        TimestampMs = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        Detections = boxes,
+                        IsNative = _yoloEngine.IsNative
+                    });
+                }
             }
         }
         catch (Exception ex)

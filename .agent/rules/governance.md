@@ -82,3 +82,7 @@ Antigravity Global Governance Rules
     Data-Driven Context: Whenever an MCP (Model Context Protocol) server is available, use get_table_schema or list_tables before writing SQL/Database queries to ensure schema accuracy.
 
     Audit Logs: Log all MCP tool calls in a hidden comment block to provide a technical audit trail of where your context was derived from.
+
+8. License:
+    Linking: Never link (Dynamic or Static) to a General Public Licnese (GPL), **unless** the current porject is also licenced as such
+    Interfacing: When interfacing with GPL ensure that it is not contagious

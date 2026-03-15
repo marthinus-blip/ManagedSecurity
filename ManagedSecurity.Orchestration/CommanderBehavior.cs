@@ -12,7 +12,7 @@ namespace ManagedSecurity.Orchestration;
 
 public record HeartbeatMessage(string AgentId, DateTime Timestamp, float CpuLoad);
 
-public record TaskAssignment(string CameraUrl, string Id, string IpAddress, int Port, string? Path, string? SnapshotUrl, TimeSpan LeaseDuration);
+public record TaskAssignment(string CameraUrl, string Id, string IpAddress, int Port, string? Path, string? SnapshotUrl, TimeSpan LeaseDuration, MachineVisionRoute MvRoute);
 
 public record TaskLease(string CameraUrl, DateTime ExpiresAt);
 
@@ -250,7 +250,7 @@ public class CommanderBehavior : IAgentBehavior
             // Simple Round-Robin or Least-Load assignment
             var targetWorker = _activeWorkers.Keys.First(); // For now just the first one
             
-            var assignment = new TaskAssignment(camera.Url, camera.Id, camera.IpAddress, camera.Port, camera.Path, camera.SnapshotUrl, TimeSpan.FromMinutes(5));
+            var assignment = new TaskAssignment(camera.Url, camera.Id, camera.IpAddress, camera.Port, camera.Path, camera.SnapshotUrl, TimeSpan.FromMinutes(5), camera.MvRoute);
             var lease = new TaskLease(camera.Url, DateTime.UtcNow.Add(assignment.LeaseDuration));
 
             _workerTasks.AddOrUpdate(targetWorker, 

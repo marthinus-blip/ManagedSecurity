@@ -4,6 +4,12 @@
 #include <string>
 #include <onnxruntime_cxx_api.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include "stb_image_resize2.h"
+
 struct YoloBoundingBox {
     float x;
     float y;
@@ -55,15 +61,49 @@ extern "C" {
         size_t input_tensor_size = 1 * 3 * 640 * 640;
         
         // Verify passed length match
+        float* inferenceData = reinterpret_cast<float*>(tensorData);
+        static std::vector<float> input_tensor_values(1 * 3 * 640 * 640);
+
         if (length < input_tensor_size * sizeof(float)) {
-            // If the buffer is smaller, we can't safely cast
-            return 0;
+            int img_width, img_height, img_channels;
+            unsigned char* img_data = stbi_load_from_memory(tensorData, length, &img_width, &img_height, &img_channels, 3);
+            
+            if (!img_data) {
+                return 0; // Invalid image or empty tensor
+            }
+
+            unsigned char* resized_data = img_data;
+            if (img_width != 640 || img_height != 640) {
+                resized_data = new unsigned char[640 * 640 * 3];
+                stbir_resize_uint8_linear(img_data, img_width, img_height, 0,
+                                          resized_data, 640, 640, 0,
+                                          (stbir_pixel_layout)STBIR_RGB);
+                stbi_image_free(img_data);
+            }
+
+            // Convert HWC to CHW planar format correctly mapped to normalized float32
+            for (int y = 0; y < 640; ++y) {
+                for (int x = 0; x < 640; ++x) {
+                    int pixel_idx = (y * 640 + x) * 3;
+                    input_tensor_values[0 * 640 * 640 + y * 640 + x] = resized_data[pixel_idx + 0] / 255.0f; // R
+                    input_tensor_values[1 * 640 * 640 + y * 640 + x] = resized_data[pixel_idx + 1] / 255.0f; // G
+                    input_tensor_values[2 * 640 * 640 + y * 640 + x] = resized_data[pixel_idx + 2] / 255.0f; // B
+                }
+            }
+
+            if (resized_data != img_data) {
+                delete[] resized_data;
+            } else {
+                stbi_image_free(img_data);
+            }
+
+            inferenceData = input_tensor_values.data();
         }
 
-        // 1. Create Input Tensor wrapped around the C# tensorData zero-copy pointer.
+        // 1. Create Input Tensor wrapped around the processed or passed pointer.
         Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
             *ort_memory_info, 
-            reinterpret_cast<float*>(tensorData), 
+            inferenceData, 
             input_tensor_size, 
             input_shape, 
             4

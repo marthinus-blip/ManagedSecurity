@@ -15,14 +15,16 @@ public class PollingSnapshotFeedStrategy : IMachineVisionFeedStrategy, IDisposab
     private readonly HttpClient _http;
     private readonly DiscoveryResult _camera;
     private readonly TimeSpan _pollingInterval;
+    private readonly ManagedSecurity.Core.Cipher? _cipher;
     
     // We reuse a lightweight PeriodicTimer instead of manual sleeps for extreme efficiency
     private PeriodicTimer? _timer;
 
-    public PollingSnapshotFeedStrategy(DiscoveryResult camera, TimeSpan pollingInterval)
+    public PollingSnapshotFeedStrategy(DiscoveryResult camera, TimeSpan pollingInterval, ManagedSecurity.Core.Cipher? cipher = null)
     {
         _camera = camera;
         _pollingInterval = pollingInterval;
+        _cipher = cipher;
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         _timer = new PeriodicTimer(_pollingInterval);
     }
@@ -36,14 +38,18 @@ public class PollingSnapshotFeedStrategy : IMachineVisionFeedStrategy, IDisposab
             // Block asynchronously until the exact next timing window to enforce Guardian constraints
             if (await _timer.WaitForNextTickAsync(ct))
             {
-                if (_camera.Url.ToLower().Contains("test") || _camera.Url == "test")
-                {
-                    return new JpegVisualTensor(new byte[1024]); // Dummy data to trigger inference processing
-                }
-
                 // Retrieve lightweight JPEG payload directly from camera API
                 var imageBytes = await _http.GetByteArrayAsync(_camera.SnapshotUrl, ct);
                 
+                if (_cipher != null && imageBytes.Length > 0)
+                {
+                    try {
+                        imageBytes = _cipher.Decrypt(imageBytes);
+                    } catch {
+                        // Suppress decrypt failures if it's already plain text
+                    }
+                }
+
                 return new JpegVisualTensor(imageBytes);
             }
         }

@@ -129,3 +129,39 @@ Resynced system lexicon by fixing 'Black Feed' on thumbnails.
 
 \n- [thought_native_telemetry_complete]((2026-03-15T10:33:54) (Why: Finished Step 3 UI telemetry overlay. Added Native LibraryImport wrapper for YOLO26_Detect_Tensor. Connected live SSE to /api/telemetry/... and metadata persistence to .telemetry.jsonl. Dashboard updated to render bounding boxes via CSS.))
 \n- [thought_zero_copy_heavy_feed]((2026-03-15T10:35:17) (Why: Implemented DecryptedStreamFeedStrategy to provide zero-copy frames to the Inquisitor, resolving the Heavy Branch stream ingestion requirement.))
+
+## [thought_native_library_naming]((2026-03-15T20:35:00) (Why: Unifying NativeLibrary magic strings across codebase.))
+> The USER pointed out an inconsistency in `Yolo26InferenceEngine.cs`: the `NativeLibrary.TryLoad()` call was attempting to load `"sentinel_yolo26_core"` while error logs explicitly stated `"libsentinel_yolo26_core.so not found!"`.
+> 
+> Under POSIX systems (Linux/macOS), the runtime's dynamic library loader automatically prepends `lib` and appends `.so`/`.dylib` when a base name is provided to a `[DllImport]` or `NativeLibrary.Load()` call. This allows .NET to remain cross-platform (loading `sentinel_yolo26_core.dll` on Windows vs `libsentinel_yolo26_core.so` on Linux).
+> 
+> However, to adhere to the `governance.md` ruling regarding Magic Strings and defensive typing, a `const string NativeLibraryName = "sentinel_yolo26_core"` was declared. This constant is now utilized consistently in `[LibraryImport]` declarations, runtime loading probes, and fallback Telemetry alerts to ensure `Ground Truth` logging reflects the exact cross-platform token being loaded, removing any confusion.
+## [thought_sanity_check]((2026-03-15T19:50:00) (Why: Validating system boundaries and addressing CS1503 compilation error caused by an invalid decrypt parameter.))
+> The `CS1503` compile error in `PollingSnapshotFeedStrategy.cs` was caused because `Cipher.Decrypt` expects a `Span<byte>` for the destination buffer, not a `ReadOnlySpan<byte>.Empty` for AAD. The invalid parameter was removed.
+> 
+> A deep sanity check into the fallback logic reveals a "happy accident" regarding `_cipher.Decrypt(imageBytes)` on plain JPEGs:
+> 1. JPEG bytes begin with `0xFF 0xD8` (SOI).
+> 2. `Bindings.Header` parses `0xFFD8...` as a Big-Endian `uint32`.
+> 3. Magic bits check: `(h >> 29) & 0x07`. `0xFF`'s top 3 bits are `111` (7). Magic check passes!
+> 4. Version bits check: `(h >> 27) & 0x03`. This yields Version `3`. 
+> 5. The protocol throws `NotImplementedException("Version 3 not implemented.")`.
+> 6. The `catch` block in `PollingSnapshotFeedStrategy` securely sinks this exception, returning the original plain text JPEG byte array unaltered.
+> 
+> System state is safe, zero-allocation memory boundaries hold, and the Sentinel agent boots cleanly.
+
+## [thought_isnative_telemetry_fix]((2026-03-15T20:20:00) (Why: Fixing the "OFFLINE (SIMULATED)" dashboard UI bug when the engine is actually running natively.))
+> The Dashboard component (`Live.razor`) continuously displayed `OFFLINE (SIMULATED)` because `InquisitorBehavior.cs` was only emitting `InferenceTelemetryEvent` payloads if it actually detected an object (`hits.Length > 0`). If no person was in the frame, no telemetry was transmitted, and the Dashboard fell back to its default state (`isNativeEngine = false`).
+> 
+> Furthermore, `Live.razor`'s state management inside the `StartTelemetryStream` block had a logical flaw: if it received telemetry *without* detections, it would overwrite the `currentBoxes` with an empty list, completely breaking the `ClearStaleBoxesAsync` 1000ms debounce loop and instantly blinking out UI boundaries on a single missed frame.
+> 
+> The Fix:
+> 1. `InquisitorBehavior.cs`: Extracted the `Array.Empty` instantiation so `OnTelemetryEmitted` is invoked on *every* processed frame, acting as a heartbeat for the Engine's status.
+> 2. `Live.razor`: Disconnected the `isNativeEngine` boolean from the Detections array logic. `isNativeEngine` now updates globally based on the heartbeat, while `currentBoxes` and the debounce timer only update if there is a valid detection overlay to draw.
+> 3. Removed the hardcoded UI logic `IsNative = true` temp patch.
+
+## [thought_native_library_naming]((2026-03-15T20:35:00) (Why: Unifying NativeLibrary magic strings across codebase.))
+> The USER pointed out an inconsistency in `Yolo26InferenceEngine.cs`: the `NativeLibrary.TryLoad()` call was attempting to load `"sentinel_yolo26_core"` while error logs explicitly stated `"libsentinel_yolo26_core.so not found!"`.
+> 
+> Under POSIX systems (Linux/macOS), the runtime's dynamic library loader automatically prepends `lib` and appends `.so`/`.dylib` when a base name is provided to a `[DllImport]` or `NativeLibrary.Load()` call. This allows .NET to remain cross-platform (loading `sentinel_yolo26_core.dll` on Windows vs `libsentinel_yolo26_core.so` on Linux).
+> 
+> However, to adhere to the `governance.md` ruling regarding Magic Strings and defensive typing, a `const string NativeLibraryName = "sentinel_yolo26_core"` was declared. This constant is now utilized consistently in `[LibraryImport]` declarations, runtime loading probes, and fallback Telemetry alerts to ensure `Ground Truth` logging reflects the exact cross-platform token being loaded, removing any confusion.

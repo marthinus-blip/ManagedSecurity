@@ -93,12 +93,12 @@ public class GuardianBehavior : IAgentBehavior
             IMachineVisionFeedStrategy feedStrategy;
             if (assignment.MvRoute == MachineVisionRoute.LightPlain)
             {
-                feedStrategy = new PollingSnapshotFeedStrategy(camera, _config.BroadPhaseInterval);
+                feedStrategy = new PollingSnapshotFeedStrategy(camera, _config.BroadPhaseInterval, _cipher);
             }
             else 
             {
                 // Placeholder for Heavy routes (DecryptedStreamFeedStrategy)
-                feedStrategy = new PollingSnapshotFeedStrategy(camera, _config.BroadPhaseInterval);
+                feedStrategy = new PollingSnapshotFeedStrategy(camera, _config.BroadPhaseInterval, _cipher);
             }
 
             var cts = new CancellationTokenSource();

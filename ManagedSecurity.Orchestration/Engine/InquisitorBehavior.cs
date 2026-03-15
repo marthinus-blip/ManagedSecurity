@@ -76,7 +76,7 @@ public class InquisitorBehavior : IAgentBehavior
             
             // In a real environment, the target object contains the proper interface for DecryptedStreamFeedStrategy
             // We use PollingSnapshotFeedStrategy here temporarily via the abstract IVisualTensor pipeline to demonstrate decoupling.
-            using IMachineVisionFeedStrategy feedStrategy = new PollingSnapshotFeedStrategy(target, TimeSpan.FromMilliseconds(33));
+            using IMachineVisionFeedStrategy feedStrategy = new PollingSnapshotFeedStrategy(target, TimeSpan.FromMilliseconds(33), _cipher);
 
             while (_isRunning && _activeTargets.ContainsKey(target.Url))
             {
@@ -86,26 +86,26 @@ public class InquisitorBehavior : IAgentBehavior
                 // Pass the frame directly zero-copy to the YOLO engine
                 var hits = await _yoloEngine.DetectAsync(frame, CancellationToken.None);
 
+                var boxes = new ManagedSecurity.Common.Models.BoundingBox[hits.Length];
                 if (hits.Length > 0)
                 {
                     Console.WriteLine($"[INQUISITOR-ENGINE] YOLO DETECTED: {hits.Length} valid targets on {target.IpAddress} with max conf {hits[0].Confidence}");
                     
-                    var boxes = new ManagedSecurity.Common.Models.BoundingBox[hits.Length];
                     for (int i = 0; i < hits.Length; i++)
                     {
                         var h = hits[i];
                         boxes[i] = new ManagedSecurity.Common.Models.BoundingBox { X = h.X, Y = h.Y, Width = h.Width, Height = h.Height, Confidence = h.Confidence, ClassId = h.ClassId, Label = "Person" };
                     }
-                    
-                    OnTelemetryEmitted?.Invoke(new ManagedSecurity.Common.Models.InferenceTelemetryEvent
-                    {
-                        CameraId = target.Id,
-                        TimestampMs = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                        Detections = boxes,
-                        IsNative = _yoloEngine.IsNative,
-                        EngineVersion = _yoloEngine.EngineVersion
-                    });
                 }
+
+                OnTelemetryEmitted?.Invoke(new ManagedSecurity.Common.Models.InferenceTelemetryEvent
+                {
+                    CameraId = target.Id,
+                    TimestampMs = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    Detections = boxes,
+                    IsNative = _yoloEngine.IsNative,
+                    EngineVersion = _yoloEngine.EngineVersion
+                });
             }
         }
         catch (Exception ex)

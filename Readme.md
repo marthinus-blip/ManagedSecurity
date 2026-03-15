@@ -223,7 +223,7 @@ dotnet run --project ManagedSecurity.Sentinel agent 192.168.1 both "p@ssword"
 ```
 
 ### Why is this necessary?
-The underlying cross-platform YOLO inference module (`libsentinel_yolo26_core.so`) is dynamically linked against ONNX Runtime (`libonnxruntime.so.1.17.1`). While .NET's `NativeLibrary.TryLoad` correctly probes for our core library, the Linux dynamic linker (`ld.so`) assumes responsibility for loading *secondary* chained dependencies (like ONNX) exactly as defined in the library header. By exporting `LD_LIBRARY_PATH` and supplying the `.so` files into the scope, we explicitly inform the OS loader where to resolve the external function bindings, ensuring zero-copy CPU execution loads properly without falling back to Telemetry Simulation Mode.
+The underlying cross-platform YOLO inference module (`sentinel_yolo26_core.so`) is dynamically linked against ONNX Runtime (`libonnxruntime.so.1.17.1`). While .NET's `NativeLibrary.TryLoad` correctly probes for our core library, the Linux dynamic linker (`ld.so`) assumes responsibility for loading *secondary* chained dependencies (like ONNX) exactly as defined in the library header. By exporting `LD_LIBRARY_PATH` and supplying the `.so` files into the scope, we explicitly inform the OS loader where to resolve the external function bindings, ensuring zero-copy CPU execution loads properly without falling back to Telemetry Simulation Mode.
 
 ## [ultralytics](https://docs.ultralytics.com/quickstart/)
 

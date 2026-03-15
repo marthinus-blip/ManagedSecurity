@@ -131,9 +131,9 @@ Resynced system lexicon by fixing 'Black Feed' on thumbnails.
 \n- [thought_zero_copy_heavy_feed]((2026-03-15T10:35:17) (Why: Implemented DecryptedStreamFeedStrategy to provide zero-copy frames to the Inquisitor, resolving the Heavy Branch stream ingestion requirement.))
 
 ## [thought_native_library_naming]((2026-03-15T20:35:00) (Why: Unifying NativeLibrary magic strings across codebase.))
-> The USER pointed out an inconsistency in `Yolo26InferenceEngine.cs`: the `NativeLibrary.TryLoad()` call was attempting to load `"sentinel_yolo26_core"` while error logs explicitly stated `"libsentinel_yolo26_core.so not found!"`.
+> The USER pointed out an inconsistency in `Yolo26InferenceEngine.cs`: the `NativeLibrary.TryLoad()` call was attempting to load `"sentinel_yolo26_core"` while error logs explicitly stated `"sentinel_yolo26_core.so not found!"`.
 > 
-> Under POSIX systems (Linux/macOS), the runtime's dynamic library loader automatically prepends `lib` and appends `.so`/`.dylib` when a base name is provided to a `[DllImport]` or `NativeLibrary.Load()` call. This allows .NET to remain cross-platform (loading `sentinel_yolo26_core.dll` on Windows vs `libsentinel_yolo26_core.so` on Linux).
+> Under POSIX systems (Linux/macOS), the runtime's dynamic library loader automatically prepends `lib` and appends `.so`/`.dylib` when a base name is provided to a `[DllImport]` or `NativeLibrary.Load()` call. This allows .NET to remain cross-platform (loading `sentinel_yolo26_core.dll` on Windows vs `sentinel_yolo26_core.so` on Linux).
 > 
 > However, to adhere to the `governance.md` ruling regarding Magic Strings and defensive typing, a `const string NativeLibraryName = "sentinel_yolo26_core"` was declared. This constant is now utilized consistently in `[LibraryImport]` declarations, runtime loading probes, and fallback Telemetry alerts to ensure `Ground Truth` logging reflects the exact cross-platform token being loaded, removing any confusion.
 ## [thought_sanity_check]((2026-03-15T19:50:00) (Why: Validating system boundaries and addressing CS1503 compilation error caused by an invalid decrypt parameter.))
@@ -160,8 +160,8 @@ Resynced system lexicon by fixing 'Black Feed' on thumbnails.
 > 3. Removed the hardcoded UI logic `IsNative = true` temp patch.
 
 ## [thought_native_library_naming]((2026-03-15T20:35:00) (Why: Unifying NativeLibrary magic strings across codebase.))
-> The USER pointed out an inconsistency in `Yolo26InferenceEngine.cs`: the `NativeLibrary.TryLoad()` call was attempting to load `"sentinel_yolo26_core"` while error logs explicitly stated `"libsentinel_yolo26_core.so not found!"`.
+> The USER pointed out an inconsistency in `Yolo26InferenceEngine.cs`: the `NativeLibrary.TryLoad()` call was attempting to load `"sentinel_yolo26_core"` while error logs explicitly stated `"sentinel_yolo26_core.so not found!"`.
 > 
-> Under POSIX systems (Linux/macOS), the runtime's dynamic library loader automatically prepends `lib` and appends `.so`/`.dylib` when a base name is provided to a `[DllImport]` or `NativeLibrary.Load()` call. This allows .NET to remain cross-platform (loading `sentinel_yolo26_core.dll` on Windows vs `libsentinel_yolo26_core.so` on Linux).
+> Under POSIX systems (Linux/macOS), the runtime's dynamic library loader automatically prepends `lib` and appends `.so`/`.dylib` when a base name is provided to a `[DllImport]` or `NativeLibrary.Load()` call. This allows .NET to remain cross-platform (loading `sentinel_yolo26_core.dll` on Windows vs `sentinel_yolo26_core.so` on Linux).
 > 
 > However, to adhere to the `governance.md` ruling regarding Magic Strings and defensive typing, a `const string NativeLibraryName = "sentinel_yolo26_core"` was declared. This constant is now utilized consistently in `[LibraryImport]` declarations, runtime loading probes, and fallback Telemetry alerts to ensure `Ground Truth` logging reflects the exact cross-platform token being loaded, removing any confusion.

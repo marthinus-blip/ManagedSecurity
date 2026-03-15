@@ -49,7 +49,7 @@ public class OrchestrationTests
         _ = commander.StartAsync(cts.Token);
         
         // Simulate a heartbeat
-        commander.ReceiveHeartbeat(new HeartbeatMessage("scout-1", DateTime.UtcNow, 0.1f, 128f, "TestOS", false));
+        commander.ReceiveHeartbeat(new HeartbeatMessage("scout-1", DateTime.UtcNow, 0.1f, 128f, "TestOS", false, ""));
         
         // Verify it's there
         // (Note: Internal state is private, but we can verify via console or by waiting for it to expire)
@@ -132,7 +132,7 @@ public class OrchestrationTests
         _ = commander.StartAsync(cts.Token);
         
         // Register the scout via heartbeat
-        commander.ReceiveHeartbeat(new HeartbeatMessage("scout-1", DateTime.UtcNow, 0.1f, 128f, "TestOS", false));
+        commander.ReceiveHeartbeat(new HeartbeatMessage("scout-1", DateTime.UtcNow, 0.1f, 128f, "TestOS", false, ""));
 
         // Act
         commander.AddCameraToPool(new ManagedSecurity.Discovery.DiscoveryResult("192.168.1.10", 554, "rtsp://192.168.1.10/live"));

@@ -7,7 +7,7 @@ using ManagedSecurity.Common.Logging;
 namespace ManagedSecurity.Orchestration.Engine;
 
 /// <summary>
-/// Simulated implementation of YOLO26 GPL-3.0 Engine boundary.
+/// Native implementation of YOLO26 GPL-3.0 Engine boundary using ONNX Runtime.
 /// The GPL-3.0 code is completely isolated here and called via P/Invoke
 /// without contaminating the Sentinel Dashboard which relies solely on standard HTTP.
 /// </summary>
@@ -17,6 +17,7 @@ public sealed partial class Yolo26InferenceEngine : IYoloInferenceEngine
     private bool _hasNativeLibrary;
 
     public bool IsNative => _hasNativeLibrary;
+    public string EngineVersion { get; private set; } = "Telemetry Simulation Mode";
 
     public Yolo26InferenceEngine(OrchestrationConfig config)
     {
@@ -27,7 +28,8 @@ public sealed partial class Yolo26InferenceEngine : IYoloInferenceEngine
         if (NativeLibrary.TryLoad("sentinel_yolo26_core", typeof(Yolo26InferenceEngine).Assembly, DllImportSearchPath.UseDllDirectoryForDependencies | DllImportSearchPath.SafeDirectories, out var _))
         {
             _hasNativeLibrary = true;
-            SentinelLogger.Heartbeat(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", "Initialized weights (GPL-3.0 Native Mode Attached)");
+            EngineVersion = Marshal.PtrToStringAnsi(Yolo26_GetEngineInfo()) ?? "Unknown Native Engine";
+            SentinelLogger.Heartbeat(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", $"Initialized weights (GPL-3.0 Native Mode Attached - {EngineVersion})");
         }
         else
         {
@@ -35,6 +37,9 @@ public sealed partial class Yolo26InferenceEngine : IYoloInferenceEngine
             SentinelLogger.NoSignal(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", "libsentinel_yolo26_core.so not found! Edge deployment falling back to Telemetry Simulation Mode.");
         }
     }
+
+    [LibraryImport("sentinel_yolo26_core", EntryPoint = "Yolo26_GetEngineInfo")]
+    private static partial IntPtr Yolo26_GetEngineInfo();
 
     [LibraryImport("sentinel_yolo26_core", EntryPoint = "Yolo26_Detect_Tensor")]
     private static partial int Yolo26_Detect_Tensor(

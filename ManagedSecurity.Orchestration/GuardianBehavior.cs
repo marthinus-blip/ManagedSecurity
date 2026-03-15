@@ -25,6 +25,7 @@ public class GuardianBehavior : IAgentBehavior
     private readonly ConcurrentDictionary<string, Task> _feedLoops = new();
 
     private readonly Func<bool>? _isNativeProvider;
+    private readonly Func<string>? _engineVersionProvider;
     private bool _isRunning;
     private bool _firstFrameSaved = false;
 
@@ -35,7 +36,8 @@ public class GuardianBehavior : IAgentBehavior
         Action<HeartbeatMessage>? onHeartbeat = null,
         Action<GuardianActivityAlert>? onAlert = null,
         Cipher? cipher = null,
-        Func<bool>? isNativeProvider = null)
+        Func<bool>? isNativeProvider = null,
+        Func<string>? engineVersionProvider = null)
     {
         _agentId = agentId;
         _config = config;
@@ -44,6 +46,7 @@ public class GuardianBehavior : IAgentBehavior
         _onAlert = onAlert;
         _cipher = cipher;
         _isNativeProvider = isNativeProvider;
+        _engineVersionProvider = engineVersionProvider;
     }
 
     public Task StartAsync(CancellationToken ct)
@@ -113,8 +116,9 @@ public class GuardianBehavior : IAgentBehavior
             float memoryMb = System.Diagnostics.Process.GetCurrentProcess().WorkingSet64 / (1024f * 1024f);
             string platform = System.Runtime.InteropServices.RuntimeInformation.OSDescription;
             bool isNative = _isNativeProvider?.Invoke() ?? false;
+            string engineVersion = _engineVersionProvider?.Invoke() ?? string.Empty;
             
-            _onHeartbeat?.Invoke(new HeartbeatMessage(_agentId, DateTime.UtcNow, load, memoryMb, platform, isNative));
+            _onHeartbeat?.Invoke(new HeartbeatMessage(_agentId, DateTime.UtcNow, load, memoryMb, platform, isNative, engineVersion));
             
             await Task.Delay(_config.HeartbeatInterval, ct);
         }

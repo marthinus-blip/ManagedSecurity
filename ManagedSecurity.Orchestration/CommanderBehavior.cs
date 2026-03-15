@@ -10,7 +10,7 @@ namespace ManagedSecurity.Orchestration;
 
 
 
-public record HeartbeatMessage(string AgentId, DateTime Timestamp, float CpuLoad, float MemoryLoad, string Platform, bool IsNativeMvAttached);
+public record HeartbeatMessage(string AgentId, DateTime Timestamp, float CpuLoad, float MemoryLoad, string Platform, bool IsNativeMvAttached, string EngineVersion);
 
 public record TaskAssignment(string CameraUrl, string Id, string IpAddress, int Port, string? Path, string? SnapshotUrl, TimeSpan LeaseDuration, MachineVisionRoute MvRoute);
 
@@ -27,9 +27,9 @@ public class CommanderBehavior : IAgentBehavior
 {
     public string Name => "Commander";
     private readonly OrchestrationConfig _config;
-    public record ActiveAgent(string AgentId, DateTime LastSeen, float CpuLoad, int TaskCount, float MemoryLoad, string Platform, bool IsNativeMvAttached);
+    public record ActiveAgent(string AgentId, DateTime LastSeen, float CpuLoad, int TaskCount, float MemoryLoad, string Platform, bool IsNativeMvAttached, string EngineVersion);
 
-    private readonly ConcurrentDictionary<string, (DateTime Timestamp, float CpuLoad, float MemoryLoad, string Platform, bool IsNativeMvAttached)> _activeWorkers = new();
+    private readonly ConcurrentDictionary<string, (DateTime Timestamp, float CpuLoad, float MemoryLoad, string Platform, bool IsNativeMvAttached, string EngineVersion)> _activeWorkers = new();
     private readonly ConcurrentDictionary<string, DiscoveryResult> _unassignedCameras = new();
     private readonly ConcurrentDictionary<string, List<TaskLease>> _workerTasks = new();
     private readonly CameraStore? _store;
@@ -194,8 +194,8 @@ public class CommanderBehavior : IAgentBehavior
     public void ReceiveHeartbeat(HeartbeatMessage hb)
     {
         _activeWorkers.AddOrUpdate(hb.AgentId, 
-            (hb.Timestamp, hb.CpuLoad, hb.MemoryLoad, hb.Platform, hb.IsNativeMvAttached), 
-            (_, _) => (hb.Timestamp, hb.CpuLoad, hb.MemoryLoad, hb.Platform, hb.IsNativeMvAttached));
+            (hb.Timestamp, hb.CpuLoad, hb.MemoryLoad, hb.Platform, hb.IsNativeMvAttached, hb.EngineVersion), 
+            (_, _) => (hb.Timestamp, hb.CpuLoad, hb.MemoryLoad, hb.Platform, hb.IsNativeMvAttached, hb.EngineVersion));
     }
 
     public IEnumerable<ActiveAgent> GetActiveAgents()
@@ -207,7 +207,8 @@ public class CommanderBehavior : IAgentBehavior
             _workerTasks.TryGetValue(kv.Key, out var tasks) ? tasks.Count : 0,
             kv.Value.MemoryLoad,
             kv.Value.Platform,
-            kv.Value.IsNativeMvAttached
+            kv.Value.IsNativeMvAttached,
+            kv.Value.EngineVersion
         ));
     }
 

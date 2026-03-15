@@ -24,6 +24,7 @@ public class InquisitorBehavior : IAgentBehavior
     private readonly IYoloInferenceEngine _yoloEngine;
     
     public bool IsNative => _yoloEngine.IsNative;
+    public string EngineVersion => _yoloEngine.EngineVersion;
 
     public InquisitorBehavior(string agentId, OrchestrationConfig config, Cipher cipher, IYoloInferenceEngine? yoloEngine = null)
     {
@@ -101,7 +102,8 @@ public class InquisitorBehavior : IAgentBehavior
                         CameraId = target.Id,
                         TimestampMs = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                         Detections = boxes,
-                        IsNative = _yoloEngine.IsNative
+                        IsNative = _yoloEngine.IsNative,
+                        EngineVersion = _yoloEngine.EngineVersion
                     });
                 }
             }

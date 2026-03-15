@@ -19,4 +19,5 @@ public record InferenceTelemetryEvent
     public ulong TimestampMs { get; init; }
     public BoundingBox[] Detections { get; init; } = Array.Empty<BoundingBox>();
     public bool IsNative { get; init; }
+    public string EngineVersion { get; init; } = string.Empty;
 }

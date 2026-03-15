@@ -685,7 +685,8 @@ class Program
                 }
             },
             cipher,
-            () => inquisitor?.IsNative ?? false) : null;
+            () => inquisitor?.IsNative ?? false,
+            () => inquisitor?.EngineVersion ?? string.Empty) : null;
 
         // Domain Discovery (Ghost Sentinel detection)
         var domain = new ManagedSecurity.Orchestration.DomainBehavior(agent.Id, version, role, new JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default });

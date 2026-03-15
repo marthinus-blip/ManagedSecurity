@@ -34,6 +34,7 @@ public readonly struct YoloBoundingBox
 public interface IYoloInferenceEngine : IDisposable
 {
     bool IsNative { get; }
+    string EngineVersion { get; }
 
     /// <summary>
     /// Executes native inference on the provided frame zero-copy.

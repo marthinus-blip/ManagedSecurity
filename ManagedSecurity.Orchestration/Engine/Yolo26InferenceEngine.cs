@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using ManagedSecurity.Common.Logging;
 
 namespace ManagedSecurity.Orchestration.Engine;
@@ -14,15 +15,17 @@ namespace ManagedSecurity.Orchestration.Engine;
 public sealed partial class Yolo26InferenceEngine : IYoloInferenceEngine
 {
     private readonly OrchestrationConfig _config;
+    private readonly ILogger _logger;
     private bool _hasNativeLibrary;
     public const string NativeLibraryName = "sentinel_yolo26_core";
     
     public bool IsNative => _hasNativeLibrary;
     public string EngineVersion { get; private set; } = "Telemetry Simulation Mode";
 
-    public Yolo26InferenceEngine(OrchestrationConfig config)
+    public Yolo26InferenceEngine(OrchestrationConfig config, ILogger logger)
     {
         _config = config;
+        _logger = logger;
         
         // [thought_yolo26_init]((2026-03-15T10:13:28) (Why: Initialize neural weights on start to eliminate hotpath spikes))
         // We elegantly probe for the native library to prevent throwing exceptions on the inference hotpath.
@@ -30,12 +33,12 @@ public sealed partial class Yolo26InferenceEngine : IYoloInferenceEngine
         {
             _hasNativeLibrary = true;
             EngineVersion = Marshal.PtrToStringAnsi(Yolo26_GetEngineInfo()) ?? "Unknown Native Engine";
-            SentinelLogger.Heartbeat(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", $"Initialized weights (GPL-3.0 Native Mode Attached - {EngineVersion})");
+            _logger.LogDebug($"Initialized weights (GPL-3.0 Native Mode Attached - {EngineVersion})");
         }
         else
         {
             _hasNativeLibrary = false;
-            SentinelLogger.NoSignal(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", $"{NativeLibraryName} not found! Edge deployment falling back to Telemetry Simulation Mode.");
+            _logger.LogError($"{NativeLibraryName} not found! Edge deployment falling back to Telemetry Simulation Mode.");
         }
     }
 
@@ -121,6 +124,6 @@ public sealed partial class Yolo26InferenceEngine : IYoloInferenceEngine
 
     public void Dispose()
     {
-        SentinelLogger.Heartbeat(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", "Neural weights unloaded.");
+        _logger.LogDebug("Neural weights unloaded.");
     }
 }

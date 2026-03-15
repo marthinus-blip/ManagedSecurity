@@ -204,10 +204,26 @@ Contributions are welcome! Please ensure:
 2. Code follows existing patterns (zero-allocation, Span-based APIs)
 3. New features include comprehensive test coverage
 
-## 🔗 Related Projects
-
 - [System.Security.Cryptography](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography)
 - [Microsoft.AspNetCore.DataProtection](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/)
+
+## 🏃‍♂️ Running the Sentinel Agent
+
+When executing the Sentinel Agent with Native Machine Vision enabled, you must ensure that the dynamically linked ONNX Runtime dependencies can be found by the OS loader.
+
+```bash
+# 1. Copy the ONNX Runtime library into the working directory
+cp onnxruntime-linux-x64/lib/libonnxruntime.so.1.17.1 . 
+
+# 2. Expose the working directory to the Linux dynamic loader
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd) 
+
+# 3. Launch the agent
+dotnet run --project ManagedSecurity.Sentinel agent 192.168.1 both "p@ssword"
+```
+
+### Why is this necessary?
+The underlying cross-platform YOLO inference module (`libsentinel_yolo26_core.so`) is dynamically linked against ONNX Runtime (`libonnxruntime.so.1.17.1`). While .NET's `NativeLibrary.TryLoad` correctly probes for our core library, the Linux dynamic linker (`ld.so`) assumes responsibility for loading *secondary* chained dependencies (like ONNX) exactly as defined in the library header. By exporting `LD_LIBRARY_PATH` and supplying the `.so` files into the scope, we explicitly inform the OS loader where to resolve the external function bindings, ensuring zero-copy CPU execution loads properly without falling back to Telemetry Simulation Mode.
 
 ## [ultralytics](https://docs.ultralytics.com/quickstart/)
 

@@ -3,6 +3,14 @@ using System.Collections.Generic;
 
 namespace ManagedSecurity.Discovery;
 
+public enum MachineVisionRoute
+{
+    None = 0,
+    LightPlain = 1,       // Branch Light: Polling JPEGs directly from Camera HTTP API
+    HeavyPlain = 2,       // Branch Heavy (Plain): Intercept raw GStreamer RGB before Encryption (Local Only)
+    HeavySensitive = 3    // Branch Heavy (Sensitive): Hook OnFrameDecrypted after E2EE transmission (Remote Worker)
+}
+
 public class DiscoveryResult
 {
     public string IpAddress { get; set; } = string.Empty;
@@ -14,6 +22,9 @@ public class DiscoveryResult
     public string? DisplayName { get; set; }
     public bool IsConfigured { get; set; }
     public string Id { get; set; } = string.Empty;
+
+    public bool IsMvEnabled { get; set; } = true;
+    public MachineVisionRoute MvRoute { get; set; } = MachineVisionRoute.LightPlain;
 
     public DiscoveryResult() { }
 

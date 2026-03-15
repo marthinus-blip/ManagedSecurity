@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedSecurity.Core;
 using ManagedSecurity.Discovery;
+using ManagedSecurity.Orchestration.Engine;
 
 namespace ManagedSecurity.Orchestration;
 
@@ -18,8 +20,13 @@ public class GuardianBehavior : IAgentBehavior
     private readonly Cipher? _cipher;
     private readonly ConcurrentDictionary<string, DiscoveryResult> _activeTasks = new();
     private readonly ConcurrentDictionary<string, byte[]> _lastFrames = new();
-    private readonly HttpClient _http = new();
+    
+    // Each camera feed runs in its own isolated task to avoid blocking the Guardian
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _feedCts = new();
+    private readonly ConcurrentDictionary<string, Task> _feedLoops = new();
+
     private bool _isRunning;
+    private bool _firstFrameSaved = false;
 
     public GuardianBehavior(
         string agentId, 
@@ -35,12 +42,9 @@ public class GuardianBehavior : IAgentBehavior
         _onHeartbeat = onHeartbeat;
         _onAlert = onAlert;
         _cipher = cipher;
-        
-        // Timeout snapshots longer to allow GStreamer startup
-        _http.Timeout = TimeSpan.FromSeconds(30);
     }
 
-    public async Task StartAsync(CancellationToken ct)
+    public Task StartAsync(CancellationToken ct)
     {
         _isRunning = true;
         Console.WriteLine($"[GUARDIAN] Scout {_agentId} started. Frequency: {_config.BroadPhaseInterval.TotalSeconds}s");
@@ -48,29 +52,17 @@ public class GuardianBehavior : IAgentBehavior
         // Start Heartbeat loop
         _ = HeartbeatLoop(ct);
 
-        while (!ct.IsCancellationRequested && _isRunning)
-        {
-            var tasks = _activeTasks.Values.ToList();
-            foreach (var task in tasks)
-            {
-                try 
-                {
-                    await ProcessBroadPhaseAsync(task, ct);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[GUARDIAN] Task yield failure for {task.IpAddress}: {ex.Message}");
-                }
-            }
-
-            await Task.Delay(_config.BroadPhaseInterval, ct);
-        }
+        // Core execution loop is now decoupled into per-camera tasks via AcceptAssignment
+        return Task.CompletedTask;
     }
 
     public Task StopAsync()
     {
         _isRunning = false;
-        _http.Dispose();
+        foreach (var feedCts in _feedCts.Values)
+        {
+            feedCts.Cancel();
+        }
         return Task.CompletedTask;
     }
 
@@ -79,11 +71,34 @@ public class GuardianBehavior : IAgentBehavior
         var camera = new DiscoveryResult(assignment.IpAddress, assignment.Port, assignment.Path)
         {
             Id = assignment.Id,
-            SnapshotUrl = assignment.SnapshotUrl ?? $"/api/snapshot/{assignment.Id}"
+            SnapshotUrl = assignment.SnapshotUrl ?? $"/api/snapshot/{assignment.Id}",
+            MvRoute = assignment.MvRoute
         };
+        
+        if (camera.SnapshotUrl.StartsWith("/"))
+        {
+            camera.SnapshotUrl = _hubBaseUrl + camera.SnapshotUrl;
+        }
+
         if (_activeTasks.TryAdd(assignment.CameraUrl, camera))
         {
-            Console.WriteLine($"[GUARDIAN] Monitoring started: {assignment.Id} ({assignment.IpAddress})");
+            Console.WriteLine($"[GUARDIAN] Monitoring started: {assignment.Id} ({assignment.IpAddress}) via {assignment.MvRoute}");
+            
+            // Map the appropriate feed strategy dynamically
+            IMachineVisionFeedStrategy feedStrategy;
+            if (assignment.MvRoute == MachineVisionRoute.LightPlain)
+            {
+                feedStrategy = new PollingSnapshotFeedStrategy(camera, _config.BroadPhaseInterval);
+            }
+            else 
+            {
+                // Placeholder for Heavy routes (DecryptedStreamFeedStrategy)
+                feedStrategy = new PollingSnapshotFeedStrategy(camera, _config.BroadPhaseInterval);
+            }
+
+            var cts = new CancellationTokenSource();
+            _feedCts[assignment.CameraUrl] = cts;
+            _feedLoops[assignment.CameraUrl] = Task.Run(() => BroadPhaseLoopAsync(camera, feedStrategy, cts.Token), cts.Token);
         }
     }
 
@@ -99,55 +114,68 @@ public class GuardianBehavior : IAgentBehavior
         }
     }
 
-    private async Task ProcessBroadPhaseAsync(DiscoveryResult camera, CancellationToken ct)
+    private async Task BroadPhaseLoopAsync(DiscoveryResult camera, IMachineVisionFeedStrategy feedStrategy, CancellationToken ct)
     {
-        // 1. Fetch Snapshot (HTTP JPEG)
-        // Note: Many cameras provide a static snapshot URL (e.g. /isapi/streaming/channels/101/picture)
-        // For now we assume the SnapshotUrl is provided or derived.
-        string snapshotUrl = camera.SnapshotUrl;
-        if (string.IsNullOrEmpty(snapshotUrl)) return;
-        
-        if (snapshotUrl.StartsWith("/"))
-        {
-            snapshotUrl = _hubBaseUrl + snapshotUrl;
-        }
-
-        Console.WriteLine($"[GUARDIAN] Polling snapshot for {camera.IpAddress}: {snapshotUrl}");
-
         try 
         {
-            byte[] rawData = await _http.GetByteArrayAsync(snapshotUrl, ct);
-            byte[] currentFrame = rawData;
+            while (!ct.IsCancellationRequested && _isRunning)
+            {
+                using var frame = await feedStrategy.GetNextFrameAsync(ct);
+                if (frame == null) continue;
 
-            if (_cipher != null)
-            {
-                try 
+                var rawData = frame.Data.ToArray();
+                byte[] currentFrame = rawData;
+
+                if (!_firstFrameSaved)
                 {
-                    currentFrame = _cipher.Decrypt(rawData);
+                    _firstFrameSaved = true;
+                    try 
+                    {
+                        var path = $"/tmp/guardian_first_frame_{camera.Id}.jpg";
+                        await System.IO.File.WriteAllBytesAsync(path, currentFrame, ct);
+                        Console.WriteLine($"[GUARDIAN] GROUND TRUTH VERIFICATION: Saved {currentFrame.Length} bytes to {path}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[GUARDIAN] Failed to save verification frame: {ex.Message}");
+                    }
                 }
-                catch (Exception ex)
+
+                if (_cipher != null && camera.MvRoute == MachineVisionRoute.LightPlain == false) // Simple check
                 {
-                    Console.WriteLine($"[GUARDIAN] Decryption failed for {camera.IpAddress}: {ex.Message}");
-                    return;
+                    try 
+                    {
+                        currentFrame = _cipher.Decrypt(rawData);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[GUARDIAN] Decryption failed for {camera.IpAddress}: {ex.Message}");
+                        continue;
+                    }
                 }
-            }
-            
-            if (_lastFrames.TryGetValue(camera.Url, out byte[]? lastFrame))
-            {
-                // 2. Compute Saliency (Placeholder: Basic byte-diff intensity)
-                float intensity = ComputeSaliency(lastFrame, currentFrame);
                 
-                if (intensity > 0.05f) // 5% change threshold
+                if (_lastFrames.TryGetValue(camera.Url, out byte[]? lastFrame))
                 {
-                    _onAlert?.Invoke(new GuardianActivityAlert(_agentId, camera.Url, DateTime.UtcNow, intensity));
+                    // 2. Compute Saliency (Placeholder: Basic byte-diff intensity)
+                    float intensity = ComputeSaliency(lastFrame, currentFrame);
+                    
+                    if (intensity > 0.05f) // 5% change threshold
+                    {
+                        _onAlert?.Invoke(new GuardianActivityAlert(_agentId, camera.Url, DateTime.UtcNow, intensity));
+                    }
                 }
-            }
 
-            _lastFrames[camera.Url] = currentFrame;
+                _lastFrames[camera.Url] = currentFrame;
+            }
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            Console.WriteLine($"[GUARDIAN] Snap poll failed for {camera.IpAddress}: {ex.Message}");
+            Console.WriteLine($"[GUARDIAN] Feed loop crashed for {camera.IpAddress}: {ex.Message}");
+        }
+        finally 
+        {
+            if (feedStrategy is IDisposable d) d.Dispose();
         }
     }
 

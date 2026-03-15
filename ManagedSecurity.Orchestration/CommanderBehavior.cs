@@ -12,7 +12,7 @@ namespace ManagedSecurity.Orchestration;
 
 public record HeartbeatMessage(string AgentId, DateTime Timestamp, float CpuLoad);
 
-public record TaskAssignment(string CameraUrl, string Id, string IpAddress, int Port, string? Path, string? SnapshotUrl, TimeSpan LeaseDuration);
+public record TaskAssignment(string CameraUrl, string Id, string IpAddress, int Port, string? Path, string? SnapshotUrl, TimeSpan LeaseDuration, MachineVisionRoute MvRoute);
 
 public record TaskLease(string CameraUrl, DateTime ExpiresAt);
 
@@ -27,7 +27,9 @@ public class CommanderBehavior : IAgentBehavior
 {
     public string Name => "Commander";
     private readonly OrchestrationConfig _config;
-    private readonly ConcurrentDictionary<string, DateTime> _activeWorkers = new();
+    public record ActiveAgent(string AgentId, DateTime LastSeen, float CpuLoad, int TaskCount);
+
+    private readonly ConcurrentDictionary<string, (DateTime Timestamp, float CpuLoad)> _activeWorkers = new();
     private readonly ConcurrentDictionary<string, DiscoveryResult> _unassignedCameras = new();
     private readonly ConcurrentDictionary<string, List<TaskLease>> _workerTasks = new();
     private readonly CameraStore? _store;
@@ -191,7 +193,17 @@ public class CommanderBehavior : IAgentBehavior
 
     public void ReceiveHeartbeat(HeartbeatMessage hb)
     {
-        _activeWorkers.AddOrUpdate(hb.AgentId, hb.Timestamp, (_, _) => hb.Timestamp);
+        _activeWorkers.AddOrUpdate(hb.AgentId, (hb.Timestamp, hb.CpuLoad), (_, _) => (hb.Timestamp, hb.CpuLoad));
+    }
+
+    public IEnumerable<ActiveAgent> GetActiveAgents()
+    {
+        return _activeWorkers.Select(kv => new ActiveAgent(
+            kv.Key, 
+            kv.Value.Timestamp, 
+            kv.Value.CpuLoad, 
+            _workerTasks.TryGetValue(kv.Key, out var tasks) ? tasks.Count : 0
+        ));
     }
 
     public void ReceiveAlert(GuardianActivityAlert alert)
@@ -204,7 +216,7 @@ public class CommanderBehavior : IAgentBehavior
     {
         var now = DateTime.UtcNow;
         var deadWorkers = _activeWorkers
-            .Where(w => now - w.Value > _config.WorkerTimeout)
+            .Where(w => now - w.Value.Timestamp > _config.WorkerTimeout)
             .Select(w => w.Key)
             .ToList();
 
@@ -238,7 +250,7 @@ public class CommanderBehavior : IAgentBehavior
             // Simple Round-Robin or Least-Load assignment
             var targetWorker = _activeWorkers.Keys.First(); // For now just the first one
             
-            var assignment = new TaskAssignment(camera.Url, camera.Id, camera.IpAddress, camera.Port, camera.Path, camera.SnapshotUrl, TimeSpan.FromMinutes(5));
+            var assignment = new TaskAssignment(camera.Url, camera.Id, camera.IpAddress, camera.Port, camera.Path, camera.SnapshotUrl, TimeSpan.FromMinutes(5), camera.MvRoute);
             var lease = new TaskLease(camera.Url, DateTime.UtcNow.Add(assignment.LeaseDuration));
 
             _workerTasks.AddOrUpdate(targetWorker, 

@@ -22,6 +22,8 @@ public class InquisitorBehavior : IAgentBehavior
     private bool _isRunning;
     private readonly ConcurrentDictionary<string, DiscoveryResult> _activeTargets = new();
     private readonly IYoloInferenceEngine _yoloEngine;
+    
+    public bool IsNative => _yoloEngine.IsNative;
 
     public InquisitorBehavior(string agentId, OrchestrationConfig config, Cipher cipher, IYoloInferenceEngine? yoloEngine = null)
     {

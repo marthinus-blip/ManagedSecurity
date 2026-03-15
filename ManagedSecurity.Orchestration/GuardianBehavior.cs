@@ -21,10 +21,10 @@ public class GuardianBehavior : IAgentBehavior
     private readonly ConcurrentDictionary<string, DiscoveryResult> _activeTasks = new();
     private readonly ConcurrentDictionary<string, byte[]> _lastFrames = new();
     
-    // Each camera feed runs in its own isolated task to avoid blocking the Guardian
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _feedCts = new();
     private readonly ConcurrentDictionary<string, Task> _feedLoops = new();
 
+    private readonly Func<bool>? _isNativeProvider;
     private bool _isRunning;
     private bool _firstFrameSaved = false;
 
@@ -34,7 +34,8 @@ public class GuardianBehavior : IAgentBehavior
         string hubBaseUrl = "http://localhost:5188",
         Action<HeartbeatMessage>? onHeartbeat = null,
         Action<GuardianActivityAlert>? onAlert = null,
-        Cipher? cipher = null)
+        Cipher? cipher = null,
+        Func<bool>? isNativeProvider = null)
     {
         _agentId = agentId;
         _config = config;
@@ -42,6 +43,7 @@ public class GuardianBehavior : IAgentBehavior
         _onHeartbeat = onHeartbeat;
         _onAlert = onAlert;
         _cipher = cipher;
+        _isNativeProvider = isNativeProvider;
     }
 
     public Task StartAsync(CancellationToken ct)
@@ -108,7 +110,11 @@ public class GuardianBehavior : IAgentBehavior
         {
             // Calculate a synthetic load for the General to see
             float load = (float)(_activeTasks.Count * 0.05); // 5% per active camera
-            _onHeartbeat?.Invoke(new HeartbeatMessage(_agentId, DateTime.UtcNow, load));
+            float memoryMb = System.Diagnostics.Process.GetCurrentProcess().WorkingSet64 / (1024f * 1024f);
+            string platform = System.Runtime.InteropServices.RuntimeInformation.OSDescription;
+            bool isNative = _isNativeProvider?.Invoke() ?? false;
+            
+            _onHeartbeat?.Invoke(new HeartbeatMessage(_agentId, DateTime.UtcNow, load, memoryMb, platform, isNative));
             
             await Task.Delay(_config.HeartbeatInterval, ct);
         }

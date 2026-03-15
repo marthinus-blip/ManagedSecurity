@@ -684,7 +684,8 @@ class Program
                     inquisitor.AcceptTarget(new DiscoveryResult("unknown", 0, null) { Url = alert.CameraUrl });
                 }
             },
-            cipher) : null;
+            cipher,
+            () => inquisitor?.IsNative ?? false) : null;
 
         // Domain Discovery (Ghost Sentinel detection)
         var domain = new ManagedSecurity.Orchestration.DomainBehavior(agent.Id, version, role, new JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default });

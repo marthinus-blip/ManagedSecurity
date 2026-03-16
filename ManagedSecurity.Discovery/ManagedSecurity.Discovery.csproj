@@ -8,6 +8,7 @@
     <LangVersion>Latest</LangVersion>
     <IsAotCompatible>true</IsAotCompatible>
     <Description>Network discovery and RTSP probing for the Sentinel ecosystem.</Description>
+    <PackageLicenseExpression>GPL-3.0</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

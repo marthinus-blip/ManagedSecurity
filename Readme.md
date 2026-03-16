@@ -193,16 +193,16 @@ The project uses `MSTest.Sdk` with `Microsoft.Testing.Platform` for NativeAOT-co
 #   succeeded: 14
 ```
 
-## 📝 License
+## 📝 License (Multi-License Structure)
 
-GPL-3.0
+The `ManagedSecurity` repository uses a **split per-project licensing model** to completely quarantine the viral nature of the GPL-3.0 machine vision integrations from the permissive core cryptography libraries.
 
-## 🤝 Contributing
+* **MIT License**: `ManagedSecurity.Common` & `ManagedSecurity.Core`
+  * These libraries implement the "Perfect 32" protocol and AES-GCM encryption. They contain **zero** dependencies on the YOLO engine and can be freely integrated into proprietary/commercial applications (like the Sentinel Dashboard ecosystem) without GPL contagion.
+* **GPL-3.0**: `ManagedSecurity.Orchestration`, `ManagedSecurity.Discovery`, & `ManagedSecurity.Sentinel`
+  * These node/agent libraries dynamically link to `sentinel_yolo26_core.so` (Ultralytics YOLO26 C++ interop). To honor the GPL constraints of the upstream Ultralytics repository, the Native execution boundary and the edge agent binaries are strictly licensed under the GPL-3.0.
 
-Contributions are welcome! Please ensure:
-1. All tests pass with NativeAOT compilation
-2. Code follows existing patterns (zero-allocation, Span-based APIs)
-3. New features include comprehensive test coverage
+*Note: Consumer applications (like dashboards) should only ever link against the MIT-licensed `Core` and `Common` DLLs to decrypt streams over the network. Under no circumstances should a proprietary application reference the `Orchestration` or `Sentinel` class libraries directly if they wish to remain uninfected by the GPL.*
 
 - [System.Security.Cryptography](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography)
 - [Microsoft.AspNetCore.DataProtection](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/)

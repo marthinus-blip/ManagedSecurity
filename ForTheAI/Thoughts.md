@@ -203,3 +203,7 @@ Resynced system lexicon by fixing 'Black Feed' on thumbnails.
 
 ## [thought_mission_complete]((2026-03-16T19:48:00) (Why: Final visual verification loop complete))
 > Visual verification has confirmed the "Groundhog Day" issues are unconditionally dead. The green `Person (96%)` bounding box tracks seamlessly over the operator's video feed. `MV CORE: ONLINE` is reading green and true. Mission accomplished. No more magic strings or offset scaling bugs!
+
+## [thought_multi_license_architecture]((2026-03-16T20:25:00) (Why: Mitigating YOLO GPL Contagion on the Dashboard))
+> The USER correctly noted that defining a blanket GPL-3.0 license at the repository root forces the `Sentinel-Dashboard` (which consumes `ManagedSecurity.Core` and `ManagedSecurity.Common`) into legally contagious territory. 
+> To isolate the Dashboard from open-source infection without splitting the repository, I implemented a formal **Per-Project Multi-License Structure**. I generated `LICENSE.MIT` files for the core cryptographic libraries and `LICENSE.GPL3` files strictly for the Node agent/Orchestration packages. I updated all `.csproj` files to emit `<PackageLicenseExpression>` metadata natively, meaning any consumers mapping to the zero-copy crypto utilities correctly inherit the MIT license safely. The GPL wall holds.

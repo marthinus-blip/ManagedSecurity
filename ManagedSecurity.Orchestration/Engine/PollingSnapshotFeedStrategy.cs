@@ -25,7 +25,7 @@ public class PollingSnapshotFeedStrategy : IMachineVisionFeedStrategy, IDisposab
         _camera = camera;
         _pollingInterval = pollingInterval;
         _cipher = cipher;
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         _timer = new PeriodicTimer(_pollingInterval);
     }
 

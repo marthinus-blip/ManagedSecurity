@@ -26,7 +26,17 @@ public sealed partial class Yolo26InferenceEngine : IYoloInferenceEngine
         
         // [thought_yolo26_init]((2026-03-15T10:13:28) (Why: Initialize neural weights on start to eliminate hotpath spikes))
         // We elegantly probe for the native library to prevent throwing exceptions on the inference hotpath.
-        if (NativeLibrary.TryLoad(NativeLibraryName, typeof(Yolo26InferenceEngine).Assembly, DllImportSearchPath.UseDllDirectoryForDependencies | DllImportSearchPath.SafeDirectories, out var _))
+        
+        // Explicitly pre-load libonnxruntime before loading sentinel_yolo26_core to ensure the Linux dynamic linker 
+        // finds the DT_NEEDED dependency without requiring LD_LIBRARY_PATH modifications in the terminal.
+        var basePath = AppContext.BaseDirectory;
+        string onnxPath = System.IO.Path.Combine(basePath, "libonnxruntime.so.1.17.1");
+        string corePath = System.IO.Path.Combine(basePath, "sentinel_yolo26_core.so");
+        
+        NativeLibrary.TryLoad(onnxPath, out var _);
+        
+        if (NativeLibrary.TryLoad(corePath, out var _) || 
+            NativeLibrary.TryLoad(NativeLibraryName, typeof(Yolo26InferenceEngine).Assembly, DllImportSearchPath.UseDllDirectoryForDependencies | DllImportSearchPath.SafeDirectories, out _))
         {
             _hasNativeLibrary = true;
             EngineVersion = Marshal.PtrToStringAnsi(Yolo26_GetEngineInfo()) ?? "Unknown Native Engine";

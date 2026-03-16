@@ -207,23 +207,30 @@ Contributions are welcome! Please ensure:
 - [System.Security.Cryptography](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography)
 - [Microsoft.AspNetCore.DataProtection](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/)
 
-## 🏃‍♂️ Running the Sentinel Agent
+## 🏃‍♂️ Building the Native YOLO Engine 
 
-When executing the Sentinel Agent with Native Machine Vision enabled, you must ensure that the dynamically linked ONNX Runtime dependencies can be found by the OS loader.
+To compile the `sentinel_yolo26_core.so` interop library from source, you need `g++` and the downloaded ONNX Runtime binaries.
 
 ```bash
-# 1. Copy the ONNX Runtime library into the working directory
-cp onnxruntime-linux-x64/lib/libonnxruntime.so.1.17.1 . 
-
-# 2. Expose the working directory to the Linux dynamic loader
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd) 
-
-# 3. Launch the agent
-dotnet run --project ManagedSecurity.Sentinel agent 192.168.1 both "p@ssword"
+# Compile the shared library using g++ (with rpath for portable linking)
+g++ -shared -fPIC -O3 \
+    -I./onnxruntime-linux-x64/include \
+    yolo26_interop.cpp \
+    -L./onnxruntime-linux-x64/lib -lonnxruntime \
+    -Wl,-rpath,'$ORIGIN' \
+    -o sentinel_yolo26_core.so
 ```
 
-### Why is this necessary?
-The underlying cross-platform YOLO inference module (`sentinel_yolo26_core.so`) is dynamically linked against ONNX Runtime (`libonnxruntime.so.1.17.1`). While .NET's `NativeLibrary.TryLoad` correctly probes for our core library, the Linux dynamic linker (`ld.so`) assumes responsibility for loading *secondary* chained dependencies (like ONNX) exactly as defined in the library header. By exporting `LD_LIBRARY_PATH` and supplying the `.so` files into the scope, we explicitly inform the OS loader where to resolve the external function bindings, ensuring zero-copy CPU execution loads properly without falling back to Telemetry Simulation Mode.
+### Advanced Dynamic Loader Strategy (Linux)
+The underlying cross-platform YOLO inference module (`sentinel_yolo26_core.so`) is dynamically linked against ONNX Runtime (`libonnxruntime.so.1.17.1`). During execution, `.NET`'s `NativeLibrary.TryLoad` intercepts the load sequence by loading the ONNX Runtime library explicitly via `AppContext.BaseDirectory` *before* loading the primary interop library. Coupled with the `-Wl,-rpath,'$ORIGIN'` build flag, the Linux dynamic linker (`ld.so`) can seamlessly locate chained dependencies inside the local binary folder. This completely eliminates the need for any wrapper scripts modifying `LD_LIBRARY_PATH`, ensuring secure NativeAOT CPU execution loads out-of-the-box perfectly.
+
+## 🏃‍♂️ Running the Sentinel Agent
+
+Launch the agent with Native Machine Vision executing natively:
+
+```bash
+dotnet run --project ManagedSecurity.Sentinel agent 192.168.8 both "p@ssword"
+```
 
 ## [ultralytics](https://docs.ultralytics.com/quickstart/)
 

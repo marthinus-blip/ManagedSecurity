@@ -679,9 +679,25 @@ class Program
                 // Escalate to Narrow Phase logic locally (zero-copy trigger)
                 if (inquisitor != null)
                 {
-                    // For now, construct a dummy DiscoveryResult or retrieve from a shared local pool.
-                    // This creates a targeted local escalation link between Guardian & Inquisitor.
-                    inquisitor.AcceptTarget(new DiscoveryResult("unknown", 0, null) { Url = alert.CameraUrl });
+                    var targetCam = commander?.GetCameras().FirstOrDefault(c => c.Url == alert.CameraUrl);
+                    if (targetCam != null)
+                    {
+                        var clonedCam = new DiscoveryResult(targetCam.IpAddress, targetCam.Port, targetCam.Path)
+                        {
+                            Id = targetCam.Id,
+                            DisplayName = targetCam.DisplayName,
+                            RequiresAuth = targetCam.RequiresAuth,
+                            MvRoute = targetCam.MvRoute,
+                            SnapshotUrl = targetCam.SnapshotUrl.StartsWith("/") 
+                                ? "http://localhost:5188" + targetCam.SnapshotUrl 
+                                : targetCam.SnapshotUrl
+                        };
+                        inquisitor.AcceptTarget(clonedCam);
+                    }
+                    else
+                    {
+                        inquisitor.AcceptTarget(new DiscoveryResult("unknown", 0, null) { Url = alert.CameraUrl, SnapshotUrl = $"http://localhost:5188/api/snapshot/{Uri.EscapeDataString(alert.CameraUrl)}" });
+                    }
                 }
             },
             cipher,
@@ -699,7 +715,6 @@ class Program
 
         if (commander != null)
         {
-            await commander.InitializeFromStoreAsync();
             await agent.AddBehaviorAsync(commander);
         }
 
@@ -713,6 +728,11 @@ class Program
                 };
             }
             await agent.AddBehaviorAsync(guardian);
+        }
+        
+        if (commander != null)
+        {
+            await commander.InitializeFromStoreAsync();
         }
 
         if (commander != null && subnetOrConfig.Contains('.'))
@@ -760,9 +780,10 @@ class Program
         // 3. Start Continuous Vault Recorders
         if (sentinelConfig.EnableVaultRecording && commander != null)
         {
-            _ = Task.Run(async () => {
-                await StartBackgroundRecordersAsync(commander, sentinelConfig, new Cipher(new SimpleKeyProvider(DeriveKey(password))), cts.Token);
-            }, cts.Token);
+            // DISABLED FOR SANITY CHECK to prevent stream hoarding
+            // _ = Task.Run(async () => {
+            //     await StartBackgroundRecordersAsync(commander, sentinelConfig, new Cipher(new SimpleKeyProvider(DeriveKey(password))), cts.Token);
+            // }, cts.Token);
         }
 
         try
@@ -939,7 +960,7 @@ class Program
                         resp.Headers.Add("Cache-Control", "no-cache");
                         resp.Headers.Add("Connection", "keep-alive");
                         // Access-Control-Allow-Origin is already added globally by StartGovernorApiAsync
-                        resp.SendChunked = false;
+                        resp.SendChunked = true;
 
                         var writer = new StreamWriter(resp.OutputStream, new UTF8Encoding(false));
                         
@@ -998,7 +1019,9 @@ class Program
             string authenticatedUrl = sourceUrl;
             if (!string.IsNullOrEmpty(globalUser) && !sourceUrl.Contains("@"))
             {
-                authenticatedUrl = sourceUrl.Replace("rtsp://", $"rtsp://{globalUser}:{globalPass}@");
+                string safeUser = Uri.EscapeDataString(globalUser);
+                string safePass = Uri.EscapeDataString(globalPass ?? "");
+                authenticatedUrl = sourceUrl.Replace("rtsp://", $"rtsp://{safeUser}:{safePass}@");
             }
 
             // Capture to a memory stream first so we can encrypt it as a single block
@@ -1035,8 +1058,8 @@ class Program
         string pipeline;
         if (url.ToLower().Contains("test") || url == "test")
         {
-            // Use videotestsrc for simulator. Pattern=smpte provides color bars.
-            pipeline = "-q videotestsrc pattern=smpte num-buffers=1 ! video/x-raw,width=800,height=450 ! videoconvert ! jpegenc ! fdsink fd=1";
+            // Use videotestsrc for simulator. Pattern=snow provides random noise to simulate motion for Guardian.
+            pipeline = "-q videotestsrc pattern=snow num-buffers=1 ! video/x-raw,width=800,height=450 ! videoconvert ! jpegenc ! fdsink fd=1";
         }
         else 
         {

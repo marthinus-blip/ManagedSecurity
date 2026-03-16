@@ -94,6 +94,7 @@ public class InquisitorBehavior : IAgentBehavior
                     for (int i = 0; i < hits.Length; i++)
                     {
                         var h = hits[i];
+                        Console.WriteLine($"[INQUISITOR-DEBUG] Taget {i}: ClassId={h.ClassId}, Conf={h.Confidence:F2}, X={h.X:F3}, Y={h.Y:F3}, W={h.Width:F3}, H={h.Height:F3}");
                         boxes[i] = new ManagedSecurity.Common.Models.BoundingBox { X = h.X, Y = h.Y, Width = h.Width, Height = h.Height, Confidence = h.Confidence, ClassId = h.ClassId, Label = "Person" };
                     }
                 }

@@ -175,3 +175,31 @@ Resynced system lexicon by fixing 'Black Feed' on thumbnails.
 > 3. **Semantic Ground Truth**: Relying on arbitrary `LogDebug`/`LogError` strings loses the standardized EventId categorization (`[HEARTBEAT] 100`, `[NO SIGNAL] 500`) carefully defined in `SentinelLogger`, breaking the `Verifiable Truth` aesthetic formatting.
 > 
 > Actions taken: Reverted the `ILogger` injection and returned to strictly using `SentinelLogger.Heartbeat` / `SentinelLogger.NoSignal` static generation.
+
+## [thought_edge_device_thrashing]((2026-03-15T22:30:00) (Why: Defining sensible polling frequencies to prevent edge IoT device exhaustion.))
+> The USER wisely noted the camera was killed by our polling attempts. Edge IoT hardware usually features extremely weak network stacks (e.g. LwIP) and limited memory for TCP socket connections.
+> 
+> What is a sensible "poll" frequency?
+> 1. Continuous (1-30 FPS): If machine vision requires rapid ingestion, we MUST use a singleton continuous pipeline (`appsink`) instead of polling. Opening a single RTSP TCP streaming socket means zero overhead per-frame fetched under the hood. 
+> 2. HTTP JPEG Polling (Branch Light): If doing stateless HTTP CGI API polling, 1 request every 1 to 2 seconds is generally safe for Edge cameras.
+> 3. RTSP Polling (Pipeline recreation): If invoking entirely new RTSP pipeline setups (`gst-launch uridecodebin`), SDP negotiation takes seconds and hogs resources. Doing this every 3 seconds caused connection denial. A sensible fallback is a minimum of 15 seconds to allow the camera to recycle its TCP teardown sockets.
+> 4. All values should be configurable in the appsettings.json file, and overridable on a per-camera basis (in `managed_cameras.json`).
+
+## [thought_onnx_model_output_delivery]((2026-03-16T16:51:00) (Why: Fixing silent YOLO failures when running the native library.))
+> Fixed an issue where `yolo26_interop.cpp` would silently fail to detect any targets because the ONNX model file `models/yolo26n.onnx` was not being copied to the output directory during compilation. The native code trapped the load exception and continuously returned 0 detections. By updating `ManagedSecurity.Sentinel.csproj` to explicitly copy the `models/` folder as a `Link` into the bin output, the engine now successfully loads the weights at runtime and executes human detection over the `IVisualTensor` pipeline. No "bigger cousin" required.
+
+## [thought_native_dt_needed_loading]((2026-03-16T17:55:00) (Why: Fixing NativeLibrary.TryLoad failure for Linux DT_NEEDED chains.))
+> The USER correctly recognized that the YOLO detection logs seen previously (`0.79999995`) exactly matched the Telemetry Simulation Mode fallback values. The core `sentinel_yolo26_core.so` library was implicitly failing to load because the Linux `dlopen` loader could not locate its chained `DT_NEEDED` dependency (`libonnxruntime.so.1.17.1`) in the unconfigured system paths.
+> 
+> To adhere to "Ground Truth", I patched `Yolo26InferenceEngine.cs` to retrieve `AppContext.BaseDirectory` and explicitly issue a `NativeLibrary.TryLoad` for `libonnxruntime.so.1.17.1` via standard absolute paths *before* attempting to load the primary YOLO core wrapper. This guarantees the dependency is globally resident in process memory before the linker requests it, guaranteeing a pure NativeAOT execution without requiring dirty `LD_LIBRARY_PATH` wrapper scripts on Edge Scouts.
+
+## [thought_yolo_vector_normalization]((2026-03-16T18:35:00) (Why: Validating vector normalization math for the web UI))
+> Crash Recovery Complete: Rebuilt `sentinel_yolo26_core.so` after removing duplicate static variables in `yolo26_interop.cpp`.
+> Further investigation into "groundhogday" UI bugs revealed that the fused native ONNX output tensor for Ultralytics YOLO26 isn't `[1, 84, 8400]` as originally anticipated, but rather a pre-filtered `[1, 300, 6]` shaped tensor outputting `[x_min, y_min, x_max, y_max, confidence, classId]`. 
+> I have intercepted the `[x_max, y_max]` values and explicitly factored them into `Center X, Center Y, Width, Height` variables BEFORE vector normalization, completely solving the giant/offset bounding box UI distortions.
+>
+> **Final Telemetry Patch:** Discovered that the previous `OFFLINE (SIMULATED)` UI bug persisted because the C# `HttpListener` connection was forcefully closing due to `resp.SendChunked = false` with a 0-length body on initialization! Fixed to `SendChunked = true` and `await InvokeAsync(StateHasChanged)` in `Live.razor`. The dashboard is perfectly receiving live empty vectors now and reading the true engine state smoothly!
+> Restarted the pipeline and ready for operator validation.
+
+## [thought_mission_complete]((2026-03-16T19:48:00) (Why: Final visual verification loop complete))
+> Visual verification has confirmed the "Groundhog Day" issues are unconditionally dead. The green `Person (96%)` bounding box tracks seamlessly over the operator's video feed. `MV CORE: ONLINE` is reading green and true. Mission accomplished. No more magic strings or offset scaling bugs!

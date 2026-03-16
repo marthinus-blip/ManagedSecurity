@@ -20,11 +20,17 @@ public class RtspScanner
     {
         var results = new ConcurrentBag<DiscoveryResult>();
         var tasks = new List<Task>();
+        using var semaphore = new SemaphoreSlim(20);
 
         for (int i = startHost; i <= endHost; i++)
         {
             string ip = $"{subnetPrefix}.{i}";
-            tasks.Add(ScanHostAsync(ip, results));
+            tasks.Add(Task.Run(async () => 
+            {
+                await semaphore.WaitAsync();
+                try { await ScanHostAsync(ip, results); }
+                finally { semaphore.Release(); }
+            }));
         }
 
         await Task.WhenAll(tasks);

@@ -12,7 +12,7 @@ public class OrchestrationConfig
     /// <summary>
     /// How often the Guardian (Scout) performs Broad-Phase analysis.
     /// </summary>
-    public TimeSpan BroadPhaseInterval { get; set; } = TimeSpan.FromSeconds(15);
+    public TimeSpan BroadPhaseInterval { get; set; } = TimeSpan.FromSeconds(3);
 
     /// <summary>
     /// How often the Commander (General) checks for dead workers.

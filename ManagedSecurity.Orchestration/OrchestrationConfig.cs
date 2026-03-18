@@ -28,4 +28,9 @@ public class OrchestrationConfig
     /// Minimum confidence threshold for YOLO detections to be considered valid hits.
     /// </summary>
     public float YoloConfidenceThreshold { get; set; } = 0.65f;
+
+    /// <summary>
+    /// The base URL of the central Commander node that Scouts report to (e.g. http://192.168.1.100:5188)
+    /// </summary>
+    public string CommanderBaseUrl { get; set; } = "http://localhost:5188";
 }

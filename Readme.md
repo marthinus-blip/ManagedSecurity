@@ -63,6 +63,28 @@ Comprehensive test suite with NativeAOT validation.
 - Tamper detection and authentication verification
 - Data protection API integration
 
+## ⚙️ Configuration Architecture
+
+Sentinel splits its configuration into two distinct concerns to support multi-node distributed swarms:
+
+### 1. `SentinelConfig` (Host/Environment Configuration)
+Handles local execution boundaries for a specific physical node.
+- **Scope:** Per-Host Deployment.
+- **Responsibilities:** 
+  - `GovernorPort`: The local port this specific agent binds to to provide access to Vault/API streams.
+  - `VaultLocation` & `StorageQuotaGb`: Where to store recordings *on this device*.
+  - `LogLevel`: The verbosity of the local console output.
+
+### 2. `OrchestrationConfig` (Swarm/Behavior Configuration)
+Defines how an agent behaves and communicates within the distributed swarm.
+- **Scope:** Orchestration, computer vision constraints, and networked reporting.
+- **Responsibilities:**
+  - `CommanderBaseUrl`: The URI of the central Commander node that this Scout should report its telemetry to.
+  - `HeartbeatInterval` & `WorkerTimeout`: Ping frequencies to keep the swarm topology map updated.
+  - `YoloConfidenceThreshold`: The boundary limit for throwing alerts based on CV hits.
+
+By isolating `CommanderBaseUrl` into `OrchestrationConfig`, Sentinel agents can be run in "Scout-only" mode on edge devices (e.g. Raspberry Pis) and dynamically target a remote Commander node without interfering with their own local host boundaries.
+
 ## 🚀 Quick Start
 
 ### Installation
@@ -224,13 +246,28 @@ g++ -shared -fPIC -O3 \
 ### Advanced Dynamic Loader Strategy (Linux)
 The underlying cross-platform YOLO inference module (`sentinel_yolo26_core.so`) is dynamically linked against ONNX Runtime (`libonnxruntime.so.1.17.1`). During execution, `.NET`'s `NativeLibrary.TryLoad` intercepts the load sequence by loading the ONNX Runtime library explicitly via `AppContext.BaseDirectory` *before* loading the primary interop library. Coupled with the `-Wl,-rpath,'$ORIGIN'` build flag, the Linux dynamic linker (`ld.so`) can seamlessly locate chained dependencies inside the local binary folder. This completely eliminates the need for any wrapper scripts modifying `LD_LIBRARY_PATH`, ensuring secure NativeAOT CPU execution loads out-of-the-box perfectly.
 
-## 🏃‍♂️ Running the Sentinel Agent
+## 🏃‍♂️ Running the Sentinel System
 
-Launch the agent with Native Machine Vision executing natively:
+The Sentinel ecosystem utilizes a distributed swarm microarchitecture. You will open three terminals to run the system:
 
+### 1. The Sentinel Agent (Edge Worker)
+Launch the agent to initialize the Machine Vision engine and the E2EE stream.
 ```bash
-dotnet run --project ManagedSecurity.Sentinel agent 192.168.8 both "p@ssword"
+dotnet run --project ManagedSecurity.Sentinel agent 192.168.8 both "password"
 ```
+
+### 2. The Sentinel Dashboard (Local UI)
+Launch the Blazor web frontend, which natively acts as the Command/Control server.
+```bash
+dotnet run --project ../Sentinel-Dashboard
+```
+
+### 3. The Sentinel Gateway (YARP TLS Proxy)
+The Dashboard decrypts the live E2EE stream securely via the Web Crypto API, which is strictly enforced natively by all browsers using TLS context. Start the custom configured gateway:
+```bash
+dotnet run --project ManagedSecurity.Proxy
+```
+Once all components are booted, open `https://localhost:8443` in your browser.
 
 ## [ultralytics](https://docs.ultralytics.com/quickstart/)
 

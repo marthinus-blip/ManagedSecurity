@@ -658,7 +658,26 @@ class Program
         var cipher = new Cipher(new SimpleKeyProvider(key));
         
         var agent = new SentinelAgent();
-        var config = new OrchestrationConfig();
+        string orchConfigPath = Path.GetFullPath(Paths.GetRuntimePath("orchestration.json"));
+        OrchestrationConfig config = new();
+        if (File.Exists(orchConfigPath))
+        {
+            try {
+                string json = File.ReadAllText(orchConfigPath);
+                config = JsonSerializer.Deserialize(json, SentinelJsonContext.Default.OrchestrationConfig) ?? new();
+                Console.WriteLine($"[SENTINEL] Orchestration config loaded from {orchConfigPath}");
+            } catch (Exception ex) {
+                Console.WriteLine($"[SENTINEL] Failed to load orchestration config: {ex.Message}. Using defaults.");
+            }
+        }
+        else
+        {
+            config.CommanderBaseUrl = $"{sentinelConfig.GovernorProtocol}://{sentinelConfig.GovernorHost}:{sentinelConfig.GovernorPort}";
+            string defaultJson = JsonSerializer.Serialize(config, SentinelJsonContext.Default.OrchestrationConfig);
+            File.WriteAllText(orchConfigPath, defaultJson);
+            Console.WriteLine($"[SENTINEL] Created default orchestration config at {orchConfigPath}");
+        }
+        
         string configFilePath = Path.GetFullPath(Paths.GetRuntimePath("managed_cameras.json"));
         Console.WriteLine($"[SENTINEL] Runtime Data: {Path.GetFullPath(Paths.RuntimeData)}");
         Console.WriteLine($"[SENTINEL] Config File: {configFilePath}");
@@ -671,7 +690,6 @@ class Program
         var guardian = role == "scout" || role == "both" ? new GuardianBehavior(
             agent.Id, 
             config, 
-            "http://localhost:5188",
             hb => commander?.ReceiveHeartbeat(hb),
             alert => 
             {
@@ -689,14 +707,14 @@ class Program
                             RequiresAuth = targetCam.RequiresAuth,
                             MvRoute = targetCam.MvRoute,
                             SnapshotUrl = targetCam.SnapshotUrl.StartsWith("/") 
-                                ? "http://localhost:5188" + targetCam.SnapshotUrl 
+                                ? $"{sentinelConfig.GovernorProtocol}://{sentinelConfig.GovernorHost}:{sentinelConfig.GovernorPort}" + targetCam.SnapshotUrl 
                                 : targetCam.SnapshotUrl
                         };
                         inquisitor.AcceptTarget(clonedCam);
                     }
                     else
                     {
-                        inquisitor.AcceptTarget(new DiscoveryResult("unknown", 0, null) { Url = alert.CameraUrl, SnapshotUrl = $"http://localhost:5188/api/snapshot/{Uri.EscapeDataString(alert.CameraUrl)}" });
+                        inquisitor.AcceptTarget(new DiscoveryResult("unknown", 0, null) { Url = alert.CameraUrl, SnapshotUrl = $"{sentinelConfig.GovernorProtocol}://{sentinelConfig.GovernorHost}:{sentinelConfig.GovernorPort}/api/snapshot/{Uri.EscapeDataString(alert.CameraUrl)}" });
                     }
                 }
             },
@@ -801,9 +819,9 @@ class Program
     {
         int port = config.GovernorPort;
         var listener = new HttpListener();
-        listener.Prefixes.Add($"http://*:{port}/");
+        listener.Prefixes.Add($"{config.GovernorProtocol}://*:{port}/");
         listener.Start();
-        Console.WriteLine($"[GOVERNOR] Agent API & Live Server active at http://localhost:{port}/");
+        Console.WriteLine($"[GOVERNOR] Agent API & Live Server active at {config.GovernorProtocol}://{config.GovernorHost}:{port}/");
 
         byte[] key = DeriveKey(pass);
         var cipher = new Cipher(new SimpleKeyProvider(key));
@@ -878,7 +896,7 @@ class Program
                         var entries = VaultIndexer.ScanDirectory(vaultDir).ToList();
                         
                         foreach(var e in entries) {
-                            e.FullPath = $"http://localhost:5188/api/vault/fetch/{Uri.EscapeDataString(e.FileName)}";
+                            e.FullPath = $"{config.GovernorProtocol}://{config.GovernorHost}:{config.GovernorPort}/api/vault/fetch/{Uri.EscapeDataString(e.FileName)}";
                         }
 
                         var options = new JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default };
@@ -1299,10 +1317,17 @@ class Program
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (s, e) => { e.Cancel = true; cts.Cancel(); };
 
+        string sentinelConfigPath = Path.GetFullPath(Paths.GetRuntimePath("sentinel.json"));
+        SentinelConfig config = new();
+        if (File.Exists(sentinelConfigPath))
+        {
+            try { config = JsonSerializer.Deserialize(File.ReadAllText(sentinelConfigPath), SentinelJsonContext.Default.SentinelConfig) ?? new(); } catch { }
+        }
+
         var listener = new HttpListener();
-        listener.Prefixes.Add($"http://*:{port}/stream/");
+        listener.Prefixes.Add($"{config.GovernorProtocol}://*:{port}/stream/");
         listener.Start();
-        Console.WriteLine($"[LIVE] Streaming endpoint active at http://localhost:{port}/stream/ with E2EE");
+        Console.WriteLine($"[LIVE] Streaming endpoint active at {config.GovernorProtocol}://*:{port}/stream/ with E2EE");
 
         try
         {

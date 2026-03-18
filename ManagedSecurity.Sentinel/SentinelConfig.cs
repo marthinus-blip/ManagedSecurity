@@ -20,6 +20,12 @@ public class SentinelConfig
     [JsonPropertyName("governor_port")]
     public int GovernorPort { get; set; } = 5188;
 
+    [JsonPropertyName("governor_host")]
+    public string GovernorHost { get; set; } = "localhost";
+
+    [JsonPropertyName("governor_protocol")]
+    public string GovernorProtocol { get; set; } = "http";
+
     [JsonPropertyName("storage_quota_gb")]
     public double StorageQuotaGb { get; set; } = 10.0;
 }

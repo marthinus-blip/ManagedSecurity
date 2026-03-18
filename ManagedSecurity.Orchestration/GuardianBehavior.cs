@@ -16,7 +16,6 @@ public class GuardianBehavior : IAgentBehavior
     private readonly OrchestrationConfig _config;
     private readonly Action<HeartbeatMessage>? _onHeartbeat;
     private readonly Action<GuardianActivityAlert>? _onAlert;
-    private readonly string _hubBaseUrl;
     private readonly Cipher? _cipher;
     private readonly ConcurrentDictionary<string, DiscoveryResult> _activeTasks = new();
     private readonly ConcurrentDictionary<string, byte[]> _lastFrames = new();
@@ -32,7 +31,6 @@ public class GuardianBehavior : IAgentBehavior
     public GuardianBehavior(
         string agentId, 
         OrchestrationConfig config, 
-        string hubBaseUrl = "http://localhost:5188",
         Action<HeartbeatMessage>? onHeartbeat = null,
         Action<GuardianActivityAlert>? onAlert = null,
         Cipher? cipher = null,
@@ -41,7 +39,6 @@ public class GuardianBehavior : IAgentBehavior
     {
         _agentId = agentId;
         _config = config;
-        _hubBaseUrl = hubBaseUrl.TrimEnd('/');
         _onHeartbeat = onHeartbeat;
         _onAlert = onAlert;
         _cipher = cipher;
@@ -82,7 +79,7 @@ public class GuardianBehavior : IAgentBehavior
         
         if (camera.SnapshotUrl.StartsWith("/"))
         {
-            camera.SnapshotUrl = _hubBaseUrl + camera.SnapshotUrl;
+            camera.SnapshotUrl = _config.CommanderBaseUrl.TrimEnd('/') + camera.SnapshotUrl;
         }
 
         if (_activeTasks.TryAdd(assignment.CameraUrl, camera))

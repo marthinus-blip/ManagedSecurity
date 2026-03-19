@@ -37,6 +37,7 @@
     <ProjectReference Include="../ManagedSecurity.Common/ManagedSecurity.Common.csproj" />
     <ProjectReference Include="../ManagedSecurity.Core/ManagedSecurity.Core.csproj" />
     <ProjectReference Include="../ManagedSecurity.Orchestration/ManagedSecurity.Orchestration.csproj" />
+    <ProjectReference Include="..\ManagedSecurity.Protocol\ManagedSecurity.Protocol.csproj" />
   </ItemGroup>
 
 

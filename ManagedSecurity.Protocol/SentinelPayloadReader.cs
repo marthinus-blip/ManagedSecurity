@@ -18,6 +18,12 @@ public ref struct SentinelPayloadReader
     /// </summary>
     public uint SchemaId { get; }
 
+    /// <summary>
+    /// Evaluates the Most Significant Bit (MSB) to determine if this schema identifier 
+    /// belongs to the Vendor Extension namespace (e.g. com_proj).
+    /// </summary>
+    public bool IsCustomSchema => (SchemaId & 0x80000000) != 0;
+
     public SentinelPayloadReader(ReadOnlySpan<byte> payload)
     {
         if (payload.Length < sizeof(uint))

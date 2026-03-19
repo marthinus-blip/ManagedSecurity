@@ -238,4 +238,5 @@ Resynced system lexicon by fixing 'Black Feed' on thumbnails.
 > 2. The struct schema is heavily state-independent per message natively: Every transmission will be prefixed by a fixed 32-bit (4-byte) `VTableId` identifier.
 > 3. This 32-bit integer provides 4.2 billion schemas, permanently preventing namespace exhaustion, and its static width allows parsing to execute in a single CPU instruction (`BinaryPrimitives.ReadUInt32LittleEndian`) without complex `VarInt` loops on the hot path. 
 > 4. The 4 bytes act identical to JSON outer `{}` brackets, but yield extreme density, making the IPC strictly agnostic across UDP, TCP, and WebSockets.
+> 5. **Namespace Partitioning:** By using Bitwise Masking on the SchemaId (the Most Significant Bit - `0x80000000`), we bisect the namespace seamlessly. The core `int_proj` exclusively reserves `0x00000000` to `0x7FFFFFFF`, guaranteeing 2.1 billion collision-free proprietary IDs for the `com_proj` ecosystem at rigorous zero-byte network overhead.
 

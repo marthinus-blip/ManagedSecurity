@@ -86,3 +86,6 @@ Antigravity Global Governance Rules
 8. License:
     Linking: Never link (Dynamic or Static) to a General Public Licnese (GPL), **unless** the current porject is also licenced as such
     Interfacing: When interfacing with GPL ensure that it is not contagious
+
+9. User Agent Interface Optimization: (for the sake of brevity)
+    [AFIPC](Appologies for interupting. Seemd like you were stuck. Please continue.)

@@ -210,3 +210,32 @@ Resynced system lexicon by fixing 'Black Feed' on thumbnails.
 
 ## [thought_tls_overhead_mitigation](2026-03-18T19:17:01)
 > [thought TLS Overhead] Data payload is already E2EE; we only need HTTPS for the Secure Context to enable the Web Crypto API on clients. Enforcing light cipher suites (like ChaCha20-Poly1305 and AES-128-GCM) via Kestrel's `HttpsConnectionAdapterOptions.OnAuthenticate` minimizes redundant encryption compute overhead natively on edge hardware without breaking strict browser TLS requirements. Checked against YARP proxy integration constraints.
+
+## [thought_data_layer_blueprint]((2026-03-18T22:30:00) (Why: Formulating a Zero-Compromise 'arbitrary standard' architectural layout for the unified Configuration Driver and Job Tracking Data Layer.))
+> Core Challenge: Moving away from flat `managed_cameras.json` into a unified `Entity Framework Core` Data Layer that bridges `.json` for bootstrapping but strictly enforces a relational schema (SQLite/Postgres) continuously polled/lived-reloaded by the `Commander` Orchestrator. The transition must not break the current E2EE network logic or increase GC overhead on the NativeAOT edge scouts.
+> 
+> Potential Edge Cases:
+> 1. DB Locking Mechanisms: Running `JobTracking` on SQLite will risk `Database Is Locked` exceptions during highly concurrent agent lease heartbeats. We must enable WAL (Write-Ahead Logging) and `async` batching.
+> 2. `IConfiguration` Injection: Modifying the ASP.NET runtime `IConfigurationSource` to hot-reload DB changes out-of-band means we need thread-safe invalidation propagation so that the `Dashboard` doesn't fall out of sync with physical agent configuration truths.
+> 
+> Impact on Existing System Architecture:
+> - `ManagedSecurity.Common`: Will house the EF Core models (`CameraEntity`, `JobLeaseEntity`, `AgentStateEntity`) ensuring zero Magic Strings by using `enum` backing strings.
+> - `Sentinel-Dashboard`: Will migrate away from directly modifying/overwriting local `.json` to instead issuing RESTful updates over `/api/commander/cameras`, funneling schema writes cleanly via EF Core's structured DbContext transactions. This provides 100% Ground Truth logging.
+
+## [thought_commercial_caching_isolation]((2026-03-19T19:48:05) (Why: Defining caching boundaries and license isolation for commercial pivot))
+> The USER defined a strict architectural triad for the commercial pivot: `open_proj` (GPL, stable engine), `int_proj` (IPC/Protocol boundary), and `com_proj` (Proprietary, user-facing, variable).
+> 
+> Core decision regarding caching:
+> 1. `open_proj` acts as a "dumb" continuous engine (e.g., pipeline processing, stream pulling). It operates in a steady state and does NOT require complex stateful caching. Doing so adds unnecessary GC pressure to the isolated native-focused code.
+> 2. `int_proj` acts strictly as the IPC mechanism (gRPC, REST, named pipes, or shared memory). By keeping the boundary strictly Inter-Process Communication, we dynamically link nothing, guaranteeing the `com_proj` is immune to GPL contagion. No caching occurs here; it is purely transport.
+> 3. `com_proj` (Dashboard, User APIs) absorbs all variable user interactions. This is where caching yields the most benefit. We will implement aggressive caching strategies (e.g., Redis, In-Memory API response caching) here to satisfy fast response times for clients, completely insulated from the heavy video/ML computational state of the `open_proj`.
+
+## [thought_nativeaot_vtable_ipc]((2026-03-19T20:43:08) (Why: Defining the transport-agnostic serialization strategy for int_proj))
+> The USER and I reached a consensus on fundamentally rejecting Protobuf/gRPC for the `int_proj` IPC boundary due to HTTP/2 limitations in browsers and serialization overhead. 
+> 
+> Core decision for IPC:
+> 1. We will "roll our own" `SentinelPayloadReader` mimicking ADO.NET's `DbDataReader`. It operates exclusively on `ReadOnlySpan<byte>` for true zero-allocation NativeAOT parsing.
+> 2. The struct schema is heavily state-independent per message natively: Every transmission will be prefixed by a fixed 32-bit (4-byte) `VTableId` identifier.
+> 3. This 32-bit integer provides 4.2 billion schemas, permanently preventing namespace exhaustion, and its static width allows parsing to execute in a single CPU instruction (`BinaryPrimitives.ReadUInt32LittleEndian`) without complex `VarInt` loops on the hot path. 
+> 4. The 4 bytes act identical to JSON outer `{}` brackets, but yield extreme density, making the IPC strictly agnostic across UDP, TCP, and WebSockets.
+

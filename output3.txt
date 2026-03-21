@@ -1,0 +1,763 @@
+[DIAGNOSTIC] Initializing Yolo Inference Engine sequentially natively...
+[INQUISITOR] LOCAL_TEST started and standing by for Narrow Phase escalations.
+[DIAGNOSTIC] Locking onto mock local HTTP snapshot feed...
+[INQUISITOR] Locking onto target 127.0.0.1 for deep inference.
+[INQUISITOR-ENGINE] Starting YOLO26 hot path sequence for 127.0.0.1...
+[DIAGNOSTIC] Pumping frames across CV boundary for 5 seconds...
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR-ENGINE] Received frame: 134 bytes (JPEG).
+[INQUISITOR-ENGINE] YOLO DETECTED: 1 valid targets on 127.0.0.1 with max conf 0.79999995
+[INQUISITOR-DEBUG] Taget 0: ClassId=0, Conf=0.80, X=0.500, Y=0.500, W=0.200, H=0.600
+[DIAGNOSTIC-YIELD] Telemetry Received! Detections: 1. Engine version: Telemetry Simulation Mode (Native: False)
+    -> [Person] x:0.50 y:0.50 conf:0.80
+[INQUISITOR] Target rtsp://127.0.0.1:8554/ released. Returning to standby.
+[DIAGNOSTIC] Inference validation complete.

@@ -39,9 +39,17 @@ public sealed partial class Yolo26InferenceEngine : IYoloInferenceEngine
         if (NativeLibrary.TryLoad(corePath, out var _) || 
             NativeLibrary.TryLoad(NativeLibraryName, typeof(Yolo26InferenceEngine).Assembly, DllImportSearchPath.UseDllDirectoryForDependencies | DllImportSearchPath.SafeDirectories, out _))
         {
-            _hasNativeLibrary = true;
-            EngineVersion = Marshal.PtrToStringAnsi(Yolo26_GetEngineInfo()) ?? "Unknown Native Engine";
-            SentinelLogger.Heartbeat(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", $"Initialized weights (GPL-3.0 Native Mode Attached - {EngineVersion})");
+            try 
+            {
+                EngineVersion = Marshal.PtrToStringAnsi(Yolo26_GetEngineInfo()) ?? "Unknown Native Engine";
+                _hasNativeLibrary = true;
+                SentinelLogger.Heartbeat(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", $"Initialized weights (GPL-3.0 Native Mode Attached - {EngineVersion})");
+            }
+            catch (Exception ex)
+            {
+                _hasNativeLibrary = false;
+                SentinelLogger.NoSignal(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", $"Native library found but entry point failed ({ex.Message}). Falling back to Simulation.");
+            }
         }
         else
         {

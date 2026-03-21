@@ -82,7 +82,9 @@ public class InquisitorBehavior : IAgentBehavior
             while (_isRunning && _activeTargets.ContainsKey(target.Url))
             {
                 using var frame = await feedStrategy.GetNextFrameAsync(CancellationToken.None);
-                if (frame == null) continue;
+                if (frame == null || frame.Data.IsEmpty) continue;
+
+                Console.WriteLine($"[INQUISITOR-ENGINE] Received frame: {frame.Data.Length} bytes ({frame.Format}).");
 
                 // Pass the frame directly zero-copy to the YOLO engine
                 var hits = await _yoloEngine.DetectAsync(frame, CancellationToken.None);

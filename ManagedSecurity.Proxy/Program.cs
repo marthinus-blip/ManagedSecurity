@@ -36,12 +36,18 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 
     if (enableTls)
     {
-        // 2026-03-18T19:17:01 (Why)
+        // 2026-03-22T01:05:01 (Why)
         // [thought TLS Overhead] Data payload is already E2EE; we only need HTTPS for the Secure Context
-        // to enable the Web Crypto API on clients. Enforcing light cipher suites minimizes redundant encryption compute overhead.
+        // to enable the Web Crypto API on clients. Enforcing light cipher suites minimizes redundant encryption compute overhead natively.
         serverOptions.ListenAnyIP(tlsPort, listenOptions =>
         {
-            listenOptions.UseHttps(cert);
+            listenOptions.UseHttps(cert, httpsOptions => 
+            {
+                if (enforceLightweightCiphers)
+                {
+                    ManagedSecurity.Proxy.KestrelTlsOptimizer.ConfigureOptimalZeroTrustTls(httpsOptions);
+                }
+            });
         });
     }
 });

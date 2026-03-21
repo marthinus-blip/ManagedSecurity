@@ -21,12 +21,26 @@ public class PollingSnapshotFeedStrategy : IMachineVisionFeedStrategy, IDisposab
     // We reuse a lightweight PeriodicTimer instead of manual sleeps for extreme efficiency
     private PeriodicTimer? _timer;
 
-    public PollingSnapshotFeedStrategy(DiscoveryResult camera, TimeSpan pollingInterval, ManagedSecurity.Core.Cipher? cipher = null)
+    public PollingSnapshotFeedStrategy(DiscoveryResult nodeTarget, TimeSpan pollingInterval, ManagedSecurity.Core.Cipher? cipher = null)
     {
-        _camera = camera;
+        _camera = nodeTarget;
         _pollingInterval = pollingInterval;
         _cipher = cipher;
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+
+        var handler = new HttpClientHandler { ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true };
+
+        // Dynamically parse RFC HTTP URI Basic/Digest Auth securely using Handler Credentials explicitly optimally.
+        if (Uri.TryCreate(_camera.SnapshotUrl, UriKind.Absolute, out var uri) && !string.IsNullOrEmpty(uri.UserInfo))
+        {
+            var parts = uri.UserInfo.Split(':');
+            if (parts.Length == 2)
+            {
+                handler.Credentials = new System.Net.NetworkCredential(parts[0], parts[1]);
+            }
+            _camera.SnapshotUrl = new UriBuilder(uri) { UserName = "", Password = "" }.Uri.ToString(); // Remove credentials securely
+        }
+
+        _http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
         _timer = new PeriodicTimer(_pollingInterval);
     }
 

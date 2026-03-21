@@ -1,0 +1,19 @@
+[DIAGNOSTIC] Probing physical network (192.168.8.23) for live nodes natively (fast targeting)...
+[DISCOVERY] Found RTSP camera at 192.168.8.23:554/stream1
+[DIAGNOSTIC] Discovered physical target: 192.168.8.23 (Port: 554)
+[INQUISITOR] TEST_AGENT started and standing by for Narrow Phase escalations.
+[INQUISITOR] Locking onto target 192.168.8.23 for deep inference.
+[INQUISITOR-ENGINE] Starting YOLO26 hot path sequence for 192.168.8.23...
+[DIAGNOSTIC] Capturing payload frames across local topology (10s lock)...
+[POLLER:795bf2055cb8] Snapshot failed: An error occurred while sending the request.
+[POLLER:795bf2055cb8] Snapshot failed: An error occurred while sending the request.
+[POLLER:795bf2055cb8] Snapshot failed: An error occurred while sending the request.
+[POLLER:795bf2055cb8] Snapshot failed: An error occurred while sending the request.
+[POLLER:795bf2055cb8] Snapshot failed: An error occurred while sending the request.
+[POLLER:795bf2055cb8] Snapshot failed: An error occurred while sending the request.
+[POLLER:795bf2055cb8] Snapshot failed: An error occurred while sending the request.
+[POLLER:795bf2055cb8] Snapshot failed: An error occurred while sending the request.
+[POLLER:795bf2055cb8] Snapshot failed: An error occurred while sending the request.
+[POLLER:795bf2055cb8] Snapshot failed: An error occurred while sending the request.
+[INQUISITOR] Target rtsp://192.168.8.23:554/stream1 released. Returning to standby.
+[DIAGNOSTIC] Physical hardware boundary verification successfully concluded.

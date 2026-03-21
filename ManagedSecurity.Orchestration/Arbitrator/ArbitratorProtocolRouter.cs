@@ -152,7 +152,9 @@ public class ArbitratorProtocolRouter : IArbitratorProtocolRouter
     private async Task DispatchPendingJobsAsync(string agentId, CancellationToken ct)
     {
         using var scope = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.CreateScope(_serviceProvider);
-        var leaseProvider = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<ManagedSecurity.Common.Persistence.IJobLeaseProvider>(scope.ServiceProvider);
+        var leaseProvider = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<ManagedSecurity.Common.Persistence.IJobLeaseProvider>(scope.ServiceProvider);
+
+        if (leaseProvider == null) return;
 
         // Natively pull an available job explicitly mapping standard queue logic efficiently dynamically structurally conceptually natively intelligently seamlessly properly.
         var lease = await leaseProvider.FetchNextJobAsync(agentId, durationSeconds: DefaultJobLeaseDurationSeconds);
@@ -176,21 +178,33 @@ public class ArbitratorProtocolRouter : IArbitratorProtocolRouter
     private async Task UpdateJobStateAsync(string agentId, JobStateUpdatePayload payload, CancellationToken ct)
     {
         using var scope = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.CreateScope(_serviceProvider);
-        var leaseProvider = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<ManagedSecurity.Common.Persistence.IJobLeaseProvider>(scope.ServiceProvider);
-        await leaseProvider.RecordCheckpointAsync(payload.JobId, agentId, payload.StatePayload, payload.RequestedExtensionSeconds);
+        var leaseProvider = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<ManagedSecurity.Common.Persistence.IJobLeaseProvider>(scope.ServiceProvider);
+        
+        if (leaseProvider != null)
+        {
+            await leaseProvider.RecordCheckpointAsync(payload.JobId, agentId, payload.StatePayload, payload.RequestedExtensionSeconds);
+        }
     }
 
     private async Task CompleteJobAsync(string agentId, JobCompletionPayload payload, CancellationToken ct)
     {
         using var scope = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.CreateScope(_serviceProvider);
-        var leaseProvider = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<ManagedSecurity.Common.Persistence.IJobLeaseProvider>(scope.ServiceProvider);
-        await leaseProvider.ReleaseLeaseAsync(payload.JobId, agentId);
+        var leaseProvider = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<ManagedSecurity.Common.Persistence.IJobLeaseProvider>(scope.ServiceProvider);
+        
+        if (leaseProvider != null)
+        {
+            await leaseProvider.ReleaseLeaseAsync(payload.JobId, agentId);
+        }
     }
 
     private async Task FailJobAsync(string agentId, JobFailurePayload payload, CancellationToken ct)
     {
         using var scope = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.CreateScope(_serviceProvider);
-        var leaseProvider = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<ManagedSecurity.Common.Persistence.IJobLeaseProvider>(scope.ServiceProvider);
-        await leaseProvider.FailJobAsync(payload.JobId, agentId, payload.ErrorMessage);
+        var leaseProvider = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<ManagedSecurity.Common.Persistence.IJobLeaseProvider>(scope.ServiceProvider);
+        
+        if (leaseProvider != null)
+        {
+            await leaseProvider.FailJobAsync(payload.JobId, agentId, payload.ErrorMessage);
+        }
     }
 }

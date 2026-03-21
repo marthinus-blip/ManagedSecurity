@@ -2,6 +2,9 @@ namespace ManagedSecurity.Common.Persistence;
 
 public struct UserRecord
 {
+    public const string SchemaNameQl = "auth";
+    public const string TableNameQl = "Users";
+
     public long UserId { get; set; }
     
     public string EmailAddress { get; set; }

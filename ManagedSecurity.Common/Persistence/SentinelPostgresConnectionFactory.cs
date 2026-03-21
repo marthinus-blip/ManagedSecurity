@@ -17,10 +17,13 @@ public class SentinelPostgresConnectionFactory : ISentinelDbConnectionFactory
     private readonly string _connectionString;
     private readonly ITenantContextAccessor _tenantContextAccessor;
 
+    public ISqlDialectTranslator Dialect { get; }
+
     public SentinelPostgresConnectionFactory(string connectionString, ITenantContextAccessor tenantContextAccessor)
     {
         _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         _tenantContextAccessor = tenantContextAccessor ?? throw new ArgumentNullException(nameof(tenantContextAccessor));
+        Dialect = new PostgresDialectTranslator();
     }
 
     public async Task<DbConnection> CreateConnectionAsync(CancellationToken cancellationToken = default)

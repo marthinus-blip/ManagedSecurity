@@ -1,22 +1,24 @@
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Threading.Tasks;
-using Microsoft.Data.Sqlite;
 using ManagedSecurity.Common.Attributes;
 
 namespace ManagedSecurity.Common.Persistence;
 
 /// <summary>
-/// A native concrete implementation inherently tracking Ground Truth SQLite schemas dynamically efficiently efficiently compactly safely cleanly accurately.
+/// A native concrete implementation inherently tracking Ground Truth schemas dynamically explicitly bridging agnostic SQLite and PostgreSQL explicitly cleanly [ESC-OPT].
 /// </summary>
 [AllowMagicValues]
 public class SentinelDbAgentStateProvider : IAgentStateProvider
 {
     private readonly ISentinelDbConnectionFactory _connectionFactory;
+    private readonly ITenantContextAccessor _tenantAccessor;
 
-    public SentinelDbAgentStateProvider(ISentinelDbConnectionFactory connectionFactory)
+    public SentinelDbAgentStateProvider(ISentinelDbConnectionFactory connectionFactory, ITenantContextAccessor tenantAccessor)
     {
         _connectionFactory = connectionFactory;
+        _tenantAccessor = tenantAccessor;
     }
 
     public async Task UpsertAgentStateAsync(AgentStateRecordRl stateRecord)
@@ -24,16 +26,19 @@ public class SentinelDbAgentStateProvider : IAgentStateProvider
         using var connection = await _connectionFactory.CreateConnectionAsync().ConfigureAwait(false);
         using var command = connection.CreateCommand();
 
+        string tableTarget = _connectionFactory.Dialect.TranslateTableNamespace(AgentStateRecordRl.SchemaNameQl, AgentStateRecordRl.TableNameQl);
+
         string upsertQueryQl = $@"
-            INSERT INTO {AgentStateRecordRl.TableNameQl} (
+            INSERT INTO {tableTarget} (
                 {AgentStateRecordRl.AgentIdQl}, 
+                TenantId,
                 {AgentStateRecordRl.StatusDescriptionQl}, 
                 {AgentStateRecordRl.CpuLoadPercentageQl}, 
                 {AgentStateRecordRl.MemoryUsageBytesQl}, 
                 {AgentStateRecordRl.LastHeartbeatEpochQl}
             )
-            VALUES (@id, @status, @cpu, @mem, @epoch)
-            ON CONFLICT({AgentStateRecordRl.AgentIdQl}) DO UPDATE SET 
+            VALUES (@id, @tenantId, @status, @cpu, @mem, @epoch)
+            ON CONFLICT({AgentStateRecordRl.AgentIdQl}, TenantId) DO UPDATE SET 
                 {AgentStateRecordRl.StatusDescriptionQl} = @status,
                 {AgentStateRecordRl.CpuLoadPercentageQl} = @cpu,
                 {AgentStateRecordRl.MemoryUsageBytesQl} = @mem,
@@ -42,11 +47,12 @@ public class SentinelDbAgentStateProvider : IAgentStateProvider
 
         command.CommandText = upsertQueryQl;
 
-        command.Parameters.Add(new SqliteParameter("@id", stateRecord.AgentIdRl));
-        command.Parameters.Add(new SqliteParameter("@status", stateRecord.StatusDescriptionRl));
-        command.Parameters.Add(new SqliteParameter("@cpu", stateRecord.CpuLoadPercentageRl));
-        command.Parameters.Add(new SqliteParameter("@mem", stateRecord.MemoryUsageBytesRl));
-        command.Parameters.Add(new SqliteParameter("@epoch", stateRecord.LastHeartbeatEpochRl));
+        AddParameter(command, "@id", stateRecord.AgentIdRl);
+        AddParameter(command, "@tenantId", _tenantAccessor.GetActiveTenantId());
+        AddParameter(command, "@status", stateRecord.StatusDescriptionRl);
+        AddParameter(command, "@cpu", stateRecord.CpuLoadPercentageRl);
+        AddParameter(command, "@mem", stateRecord.MemoryUsageBytesRl);
+        AddParameter(command, "@epoch", stateRecord.LastHeartbeatEpochRl);
 
         await command.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
@@ -56,18 +62,21 @@ public class SentinelDbAgentStateProvider : IAgentStateProvider
         using var connection = await _connectionFactory.CreateConnectionAsync().ConfigureAwait(false);
         using var command = connection.CreateCommand();
 
+        string tableTarget = _connectionFactory.Dialect.TranslateTableNamespace(AgentStateRecordRl.SchemaNameQl, AgentStateRecordRl.TableNameQl);
+
         string selectQueryQl = $@"
             SELECT 
                 {AgentStateRecordRl.StatusDescriptionQl}, 
                 {AgentStateRecordRl.CpuLoadPercentageQl}, 
                 {AgentStateRecordRl.MemoryUsageBytesQl}, 
                 {AgentStateRecordRl.LastHeartbeatEpochQl}
-            FROM {AgentStateRecordRl.TableNameQl}
-            WHERE {AgentStateRecordRl.AgentIdQl} = @id;
+            FROM {tableTarget}
+            WHERE {AgentStateRecordRl.AgentIdQl} = @id AND TenantId = @tenantId;
         ";
 
         command.CommandText = selectQueryQl;
-        command.Parameters.Add(new SqliteParameter("@id", agentIdRl));
+        AddParameter(command, "@id", agentIdRl);
+        AddParameter(command, "@tenantId", _tenantAccessor.GetActiveTenantId());
 
         using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
         if (await reader.ReadAsync().ConfigureAwait(false))
@@ -93,6 +102,8 @@ public class SentinelDbAgentStateProvider : IAgentStateProvider
         using var connection = await _connectionFactory.CreateConnectionAsync().ConfigureAwait(false);
         using var command = connection.CreateCommand();
 
+        string tableTarget = _connectionFactory.Dialect.TranslateTableNamespace(AgentStateRecordRl.SchemaNameQl, AgentStateRecordRl.TableNameQl);
+
         string selectActiveQl = $@"
             SELECT 
                 {AgentStateRecordRl.AgentIdQl},
@@ -100,12 +111,13 @@ public class SentinelDbAgentStateProvider : IAgentStateProvider
                 {AgentStateRecordRl.CpuLoadPercentageQl}, 
                 {AgentStateRecordRl.MemoryUsageBytesQl}, 
                 {AgentStateRecordRl.LastHeartbeatEpochQl}
-            FROM {AgentStateRecordRl.TableNameQl}
-            WHERE {AgentStateRecordRl.LastHeartbeatEpochQl} >= @cutoff;
+            FROM {tableTarget}
+            WHERE {AgentStateRecordRl.LastHeartbeatEpochQl} >= @cutoff AND TenantId = @tenantId;
         ";
 
         command.CommandText = selectActiveQl;
-        command.Parameters.Add(new SqliteParameter("@cutoff", cutoffEpochRl));
+        AddParameter(command, "@cutoff", cutoffEpochRl);
+        AddParameter(command, "@tenantId", _tenantAccessor.GetActiveTenantId());
 
         using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
         while (await reader.ReadAsync().ConfigureAwait(false))
@@ -128,14 +140,25 @@ public class SentinelDbAgentStateProvider : IAgentStateProvider
         using var connection = await _connectionFactory.CreateConnectionAsync().ConfigureAwait(false);
         using var command = connection.CreateCommand();
 
+        string tableTarget = _connectionFactory.Dialect.TranslateTableNamespace(AgentStateRecordRl.SchemaNameQl, AgentStateRecordRl.TableNameQl);
+
         string deleteQueryQl = $@"
-            DELETE FROM {AgentStateRecordRl.TableNameQl}
-            WHERE {AgentStateRecordRl.AgentIdQl} = @id;
+            DELETE FROM {tableTarget}
+            WHERE {AgentStateRecordRl.AgentIdQl} = @id AND TenantId = @tenantId;
         ";
 
         command.CommandText = deleteQueryQl;
-        command.Parameters.Add(new SqliteParameter("@id", agentIdRl));
+        AddParameter(command, "@id", agentIdRl);
+        AddParameter(command, "@tenantId", _tenantAccessor.GetActiveTenantId());
 
         await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+    }
+
+    private static void AddParameter(DbCommand command, string name, object value)
+    {
+        var p = command.CreateParameter();
+        p.ParameterName = name;
+        p.Value = value ?? System.DBNull.Value;
+        command.Parameters.Add(p);
     }
 }

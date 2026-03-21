@@ -58,7 +58,8 @@ public class SentinelDbConfigurationProvider : ConfigurationProvider, IDisposabl
             // Fetch Camera definitions dynamically mapping ADO.NET structs 
             // into Microsoft.Extensions.Configuration dictionary layout.
             using var command = connection.CreateCommand();
-            command.CommandText = $"SELECT CameraId, StreamUrl, SnapshotUrl FROM {nameof(CameraRecord)}";
+            string tableTarget = _connectionFactory.Dialect.TranslateTableNamespace(CameraRecord.SchemaNameQl, CameraRecord.TableNameQl);
+            command.CommandText = $"SELECT CameraId, StreamUrl, SnapshotUrl FROM {tableTarget}";
 
             using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
             int index = 0;

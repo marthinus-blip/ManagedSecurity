@@ -11,6 +11,7 @@ namespace ManagedSecurity.Common.Persistence;
 /// </summary>
 public interface ISentinelDbConnectionFactory
 {
+    ISqlDialectTranslator Dialect { get; }
     Task<DbConnection> CreateConnectionAsync(CancellationToken cancellationToken = default);
 }
 
@@ -24,10 +25,12 @@ public class SentinelDbConnectionFactory : ISentinelDbConnectionFactory
             ";
 
     private readonly string _connectionString;
+    public ISqlDialectTranslator Dialect { get; }
 
     public SentinelDbConnectionFactory(string connectionString = DefaultConnectionString)
     {
         _connectionString = connectionString;
+        Dialect = new SqliteDialectTranslator();
     }
 
     public async Task<DbConnection> CreateConnectionAsync(CancellationToken cancellationToken = default)

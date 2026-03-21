@@ -17,8 +17,35 @@ public static class SentinelDbBootstrapper
         using var command = connection.CreateCommand();
 
         command.CommandText = $@"
-            CREATE TABLE IF NOT EXISTS {nameof(CameraRecord)} (
-                CameraId TEXT PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS {UserRecord.SchemaNameQl}_{UserRecord.TableNameQl} (
+                UserId INTEGER PRIMARY KEY AUTOINCREMENT,
+                GlobalIdentity TEXT NOT NULL UNIQUE,
+                Argon2IdHash TEXT NOT NULL,
+                IsDeleted INTEGER NOT NULL DEFAULT 0,
+                CreatedAtEpoch INTEGER NOT NULL,
+                UpdatedAtEpoch INTEGER NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS {TenantRecord.SchemaNameQl}_{TenantRecord.TableNameQl} (
+                TenantId INTEGER PRIMARY KEY AUTOINCREMENT,
+                OrganizationName TEXT NOT NULL,
+                IsDeleted INTEGER NOT NULL DEFAULT 0,
+                CreatedAtEpoch INTEGER NOT NULL,
+                UpdatedAtEpoch INTEGER NOT NULL,
+                UpdatedByUserId INTEGER NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS {TenantUserAccessRecord.SchemaNameQl}_{TenantUserAccessRecord.TableNameQl} (
+                TenantId INTEGER NOT NULL,
+                UserId INTEGER NOT NULL,
+                RoleLevel INTEGER NOT NULL,
+                GrantedAtEpoch INTEGER NOT NULL,
+                PRIMARY KEY (TenantId, UserId)
+            );
+
+            CREATE TABLE IF NOT EXISTS {CameraRecord.SchemaNameQl}_{CameraRecord.TableNameQl} (
+                CameraId TEXT,
+                TenantId INTEGER NOT NULL,
                 DisplayName TEXT,
                 StreamUrl TEXT,
                 SnapshotUrl TEXT,
@@ -29,22 +56,27 @@ public static class SentinelDbBootstrapper
                 MachineVisionRoute INTEGER,
                 EncryptedVaultCredentials BLOB,
                 SecurityNonce BLOB,
-                IsOrchestrationLeased INTEGER
+                IsOrchestrationLeased INTEGER,
+                PRIMARY KEY (CameraId, TenantId)
             );
 
-            CREATE TABLE IF NOT EXISTS {JobLeaseRecord.TableNameQl} (
-                JobId TEXT PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS {JobLeaseRecord.SchemaNameQl}_{JobLeaseRecord.TableNameQl} (
+                JobId TEXT,
+                TenantId INTEGER NOT NULL,
                 AssignedAgentId TEXT NOT NULL,
                 AcquiredAtEpoch INTEGER NOT NULL,
-                ExpiresAtEpoch INTEGER NOT NULL
+                ExpiresAtEpoch INTEGER NOT NULL,
+                PRIMARY KEY (JobId, TenantId)
             );
 
-            CREATE TABLE IF NOT EXISTS {AgentStateRecordRl.TableNameQl} (
-                {AgentStateRecordRl.AgentIdQl} TEXT PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS {AgentStateRecordRl.SchemaNameQl}_{AgentStateRecordRl.TableNameQl} (
+                {AgentStateRecordRl.AgentIdQl} TEXT,
+                TenantId INTEGER NOT NULL,
                 {AgentStateRecordRl.StatusDescriptionQl} TEXT NOT NULL,
                 {AgentStateRecordRl.CpuLoadPercentageQl} REAL NOT NULL,
                 {AgentStateRecordRl.MemoryUsageBytesQl} INTEGER NOT NULL,
-                {AgentStateRecordRl.LastHeartbeatEpochQl} INTEGER NOT NULL
+                {AgentStateRecordRl.LastHeartbeatEpochQl} INTEGER NOT NULL,
+                PRIMARY KEY ({AgentStateRecordRl.AgentIdQl}, TenantId)
             );
         ";
 

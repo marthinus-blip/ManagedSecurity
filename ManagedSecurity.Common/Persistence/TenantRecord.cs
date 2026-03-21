@@ -2,6 +2,9 @@ namespace ManagedSecurity.Common.Persistence;
 
 public struct TenantRecord
 {
+    public const string SchemaNameQl = "auth";
+    public const string TableNameQl = "Tenants";
+
     public long TenantId { get; set; }
     
     public string OrganizationName { get; set; }

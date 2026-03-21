@@ -10,6 +10,7 @@ namespace ManagedSecurity.Common.Persistence;
 public record struct AgentStateRecordRl
 {
     // --- Query Language (Ql) SQLite Constants ---
+    public const string SchemaNameQl = "auth";
     public const string TableNameQl = "AgentStateRecord";
     
     public const string AgentIdQl = "AgentId";

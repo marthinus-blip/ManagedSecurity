@@ -15,7 +15,6 @@ public class ProtocolSerializationTests
         // 1. Arrange the abstract "V-Table 0x01 Array" variables mapped via MemoryPack
         var expectedPayload = new HeartbeatPayload
         {
-            SchemaId = 0x01,
             CpuLoad = 45,
             MemoryUsage = 1.23f,
             Status = "NOMINAL"
@@ -39,7 +38,6 @@ public class ProtocolSerializationTests
         long totalAllocations = allocatedBytesEnd - allocatedBytesStart;
 
         // 4. Assert Physical Correctness
-        Assert.AreEqual(expectedPayload.SchemaId, actualPayload.SchemaId);
         Assert.AreEqual(expectedPayload.CpuLoad, actualPayload.CpuLoad);
         Assert.AreEqual(expectedPayload.MemoryUsage, actualPayload.MemoryUsage);
         Assert.AreEqual(expectedPayload.Status, actualPayload.Status);
@@ -55,7 +53,6 @@ public class ProtocolSerializationTests
         // Arrange
         var expectedPayload = new HeartbeatPayload
         {
-            SchemaId = 0x01,
             CpuLoad = 120,
             MemoryUsage = 3.14f,
             Status = "CRITICAL_OOM_STATE" 
@@ -76,7 +73,6 @@ public class ProtocolSerializationTests
         long totalAllocations = allocatedBytesEnd - allocatedBytesStart;
 
         // Assert Core Identity
-        Assert.AreEqual(expectedPayload.SchemaId, actualPayload.SchemaId);
         Assert.AreEqual(expectedPayload.Status, actualPayload.Status);
         
         // Assert mathematical constraints tracking MemoryPack's string instance overhead,

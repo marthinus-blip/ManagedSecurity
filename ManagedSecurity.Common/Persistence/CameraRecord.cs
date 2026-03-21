@@ -8,6 +8,9 @@ namespace ManagedSecurity.Common.Persistence;
 /// </summary>
 public struct CameraRecord
 {
+    public const string SchemaNameQl = "auth";
+    public const string TableNameQl = "Cameras";
+
     public string CameraId { get; set; }
     public string DisplayName { get; set; }
     public string StreamUrl { get; set; }

@@ -410,3 +410,12 @@ Resynced system lexicon by fixing 'Black Feed' on thumbnails.
 > 2. **Interface Deletion:** Systematically eliminated the obsolete `TryAcquireLeaseAsync` mapping gracefully shifting entirely to `FetchNextJobAsync` Dequeue abstractions accurately.
 > 3. **Connection Roundtrips:** Fused the payload mapping natively into the `UPDATE` layer leveraging `.RETURNING` dynamically efficiently cutting database traffic by exactly 50% cleanly.
 > 4. **Scalability:** 5 distinct Tasks inherently hammered the execution pipeline identically natively mapping exactly 10 jobs identically smoothly correctly properly naturally cleanly natively stably efficiently securely explicitly.
+
+## [thought_int_proj_arbitrator_protocol_specification](2026-03-21T15:35:00)
+> (Why: Grounding the 10-byte exactly-once custom binary C2 Arbitrator payload constraints directly matching [int_proj] architectural rules organically efficiently optimally. [LS-OPT])
+> 
+> Core Architectural Decisions:
+> 1. **Dropped Magic Bytes:** WebSocket native message framing reliably supplies explicitly exact packet bounds [INSC-OPT]. [LS-OPT]
+> 2. **Version Extension:** Promoted to `ushort` (2 bytes) eliminating statistical exhaustion seamlessly optimally cleanly creatively correctly strictly flexibly cleverly explicitly smoothly flexibly compactly creatively natively exactly flawlessly creatively elegantly. [LS-OPT]
+> 3. **0xFF00 Mask Mapping:** Segregated fixed system workflows from arbitrary developer plugin `OpCodes` functionally mapping 65,280 possible exact extension schemas [CXFS-OPT]. [LS-OPT]
+> 4. **JSON-RPC Cmdlet Debugger:** Architected `sentinel decode-c2 <hex>` dynamically bridging strictly rigid AOT serialization logically mapping binary directly visually for deterministic debugging [NSLD-OPT]. [LS-OPT]

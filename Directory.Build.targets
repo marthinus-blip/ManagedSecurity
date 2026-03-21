@@ -1,0 +1,10 @@
+<Project>
+  <!-- 
+      [INSC-OPT] Second Order Discipline Pass 
+      Function: Physically prevents the AI or Developer from lazily injecting '#pragma warning disable' to bypass Governance analyzers (like MSG001).
+      Override: To explicitly bypass this constraint for "artistic" or fundamental edge-case logic, the line MUST end with exactly '// [ARTISTIC_LICENSE]'
+  -->
+  <Target Name="EnforceGovernancePragmas" BeforeTargets="BeforeCompile">
+    <Exec Command="if find . -name '*.cs' -exec grep -Hn '#pragma warning disable' {} + | grep -v '\[ARTISTIC_LICENSE\]' | grep -v 'Generated'; then echo 'ERROR: [Governance-02] Unsanctioned #pragma bypass detected natively. Append exactly // [ARTISTIC_LICENSE] to explicitly override this core logic pipeline.'; exit 1; fi" WorkingDirectory="$(MSBuildProjectDirectory)" IgnoreExitCode="false" ContinueOnError="false" />
+  </Target>
+</Project>

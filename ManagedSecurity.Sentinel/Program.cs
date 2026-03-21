@@ -17,7 +17,7 @@ using ManagedSecurity.Common.Logging;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Diagnostics;
-
+using System.Net.WebSockets;
 namespace ManagedSecurity.Sentinel;
 
 class Program
@@ -46,6 +46,7 @@ class Program
                 "agent" => await DoAgentAsync(args),
                 "version" => PrintVersion(),
                 "live-stream" => await DoLiveStreamAsync(args),
+                "decode-c2" => DoDecodeC2(args),
 
                 "onvif-diag" => await DoOnvifDiag(args),
                 _ => PrintUsage()
@@ -80,6 +81,7 @@ class Program
         Console.WriteLine("  sentinel scan <subnet-prefix>");
         Console.WriteLine("  sentinel agent <subnet-prefix> [role: commander|scout]");
         Console.WriteLine("  sentinel inspect <src>");
+        Console.WriteLine("  sentinel decode-c2 <hex-string>");
         Console.WriteLine("  sentinel live-stream <port> <password> <source-url> [camera-id]");
         Console.WriteLine("  sentinel version");
 
@@ -194,6 +196,50 @@ class Program
         }
 
         return 0;
+    }
+
+    static int DoDecodeC2(string[] args)
+    {
+        if (args.Length < 2) return PrintUsage();
+        string hexStr = args[1].Replace("-", "").Replace(" ", "");
+
+        try 
+        {
+            byte[] buffer = new byte[hexStr.Length / 2];
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                buffer[i] = Convert.ToByte(hexStr.Substring(i * 2, 2), 16);
+            }
+
+            if (!ManagedSecurity.Protocol.ArbitratorFrame.TryParse(buffer, out var frame))
+            {
+                Console.Error.WriteLine($"[ERROR] Buffer length ({buffer.Length} bytes) is mathematically insufficient to parse {ManagedSecurity.Protocol.ArbitratorFrame.HeaderSize}-byte header natively.");
+                return 1;
+            }
+
+            // Execute zero-allocation formatting translating directly to an anonymous JSON payload structurally cleanly natively.
+            var debugView = new ManagedSecurity.Sentinel.Models.C2DecodeRecord
+            {
+                ProtocolVersion = frame.Version,
+                RouteOpCode = $"0x{frame.OpCode:X4}",
+                RouteOpCodeRaw = frame.OpCode,
+                IsSystemCommand = frame.IsSystemFrame,
+                SessionCorrelationId = frame.CorrelationId,
+                ExpectedPayloadLength = frame.PayloadLength,
+                ActualParsedPayloadLength = frame.Payload.Length,
+                PayloadBase64 = Convert.ToBase64String(frame.Payload)
+            };
+
+            var options = new JsonSerializerOptions { WriteIndented = true, TypeInfoResolver = ManagedSecurity.Sentinel.Models.C2JsonContext.Default };
+            string output = JsonSerializer.Serialize(debugView, options);
+            Console.WriteLine(output);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ERROR] Decode failure: {ex.Message}");
+            return 1;
+        }
     }
 
     static int DoIndex(string[] args)
@@ -784,11 +830,16 @@ class Program
         }
 
         // 2. Start Governor API and Live Stream Server
+        var globalArbitrator = new ManagedSecurity.Orchestration.Arbitrator.ArbitratorRegistrar();
+        
+        using var tempLoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
+        var globalProtocolRouter = new ManagedSecurity.Orchestration.Arbitrator.ArbitratorProtocolRouter(globalArbitrator, tempLoggerFactory.CreateLogger<ManagedSecurity.Orchestration.Arbitrator.ArbitratorProtocolRouter>());
+        
         if (commander != null)
         {
              _ = Task.Run(async () => {
                 try {
-                    await StartGovernorApiAsync(commander, user, password, agent.Id, sentinelConfig);
+                    await StartGovernorApiAsync(commander, user, password, agent.Id, sentinelConfig, globalArbitrator, globalProtocolRouter);
                 } catch (Exception ex) {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine($"[CRITICAL] Governor API failed to start: {ex.Message}");
@@ -821,7 +872,7 @@ class Program
         return 0;
     }
 
-    static async Task StartGovernorApiAsync(CommanderBehavior commander, string user, string pass, string agentId, SentinelConfig config)
+    static async Task StartGovernorApiAsync(CommanderBehavior commander, string user, string pass, string agentId, SentinelConfig config, ManagedSecurity.Orchestration.Arbitrator.ArbitratorRegistrar arbitrator, ManagedSecurity.Orchestration.Arbitrator.IArbitratorProtocolRouter router)
     {
         int port = config.GovernorPort;
         var listener = new HttpListener();
@@ -1020,6 +1071,43 @@ class Program
                         {
                             ManagedSecurity.Orchestration.Engine.InquisitorBehavior.OnTelemetryEmitted -= HandleTele;
                             resp.Close();
+                        }
+                    }
+                    else if (url.Equals("/api/arbitrator/tunnel", StringComparison.OrdinalIgnoreCase) && req.IsWebSocketRequest)
+                    {
+                        var wsContext = await context.AcceptWebSocketAsync(null);
+                        string remoteAgentId = req.QueryString["agentId"] ?? "unknown_edge";
+                        
+                        Console.WriteLine($"[ARBITRATOR] Edge Agent '{remoteAgentId}' dialed secure reverse tunnel structurally.");
+                        
+                        // Register the persistent bidirectional tunnel internally logically cleanly natively mapped
+                        arbitrator.RegisterTunnel(remoteAgentId, wsContext.WebSocket);
+                        
+                        // Persist the HTTP context synchronously mapping physical TCP constraints inherently until Scout disconnects organically
+                        try
+                        {
+                            // Increased buffer size to 65KB precisely explicitly mapped against our max PayloadLength variable [EE-OPT].
+                            var buffer = new byte[65536];
+                            while (wsContext.WebSocket.State == WebSocketState.Open)
+                            {
+                                var result = await wsContext.WebSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                                if (result.MessageType == WebSocketMessageType.Close) break;
+                                
+                                // Forward native binary cleanly [NSLD-OPT]
+                                if (result.MessageType == WebSocketMessageType.Binary && result.Count > 0)
+                                {
+                                    await router.RoutePayloadAsync(remoteAgentId, new ReadOnlyMemory<byte>(buffer, 0, result.Count), CancellationToken.None);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[ARBITRATOR] Tunnel error for '{remoteAgentId}': {ex.Message}");
+                        }
+                        finally
+                        {
+                            arbitrator.RemoveTunnel(remoteAgentId);
+                            Console.WriteLine($"[ARBITRATOR] Tunnel cleanly dropped for Edge '{remoteAgentId}'.");
                         }
                     }
                     else

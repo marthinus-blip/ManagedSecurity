@@ -16,6 +16,7 @@
     <ProjectReference Include="..\ManagedSecurity.Common\ManagedSecurity.Common.csproj" />
     <ProjectReference Include="..\ManagedSecurity.Discovery\ManagedSecurity.Discovery.csproj" />
     <ProjectReference Include="..\ManagedSecurity.Core\ManagedSecurity.Core.csproj" />
+    <ProjectReference Include="..\ManagedSecurity.Protocol\ManagedSecurity.Protocol.csproj" />
   </ItemGroup>
 
 </Project>

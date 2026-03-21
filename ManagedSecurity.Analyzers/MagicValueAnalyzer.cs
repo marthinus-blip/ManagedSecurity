@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace ManagedSecurity.Analyzers
 {
-#pragma warning disable MSG001
+#pragma warning disable MSG001 // [ARTISTIC_LICENSE]
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class MagicValueAnalyzer : DiagnosticAnalyzer
     {

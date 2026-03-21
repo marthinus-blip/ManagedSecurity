@@ -88,10 +88,8 @@ public class DataLayerIntegrationTests
             // 2. Act - Create provider with an aggressive 10ms polling interval for the test
             var provider = new SentinelDbConfigurationProvider(connectionFactory, TimeSpan.FromMilliseconds(10));
             
-            // Track the synthetic OnReload callback
-            bool reloadTriggered = false;
             var token = provider.GetReloadToken();
-            token.RegisterChangeCallback(_ => reloadTriggered = true, null);
+            token.RegisterChangeCallback(_ => { }, null);
 
             // Initial Load
             provider.Load();

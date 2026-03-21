@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ManagedSecurity.Orchestration\ManagedSecurity.Orchestration.csproj" />
+    <ProjectReference Include="..\ManagedSecurity.Common\ManagedSecurity.Common.csproj" />
   </ItemGroup>
 
 </Project>

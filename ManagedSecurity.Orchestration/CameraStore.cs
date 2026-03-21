@@ -28,7 +28,8 @@ public class CameraStore
         string? dir = Path.GetDirectoryName(_path);
         if (dir != null && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
-        string json = JsonSerializer.Serialize(cameras, _options);
+        var context = new CameraStoreJsonContext(_options);
+        string json = JsonSerializer.Serialize(cameras, context.ListDiscoveryResult);
         await File.WriteAllTextAsync(_path, json);
         Console.WriteLine($"[STORE] Saved {cameras.Count} cameras to {_path}. Confirmation: {File.Exists(_path)}");
     }
@@ -37,6 +38,10 @@ public class CameraStore
     {
         if (!File.Exists(_path)) return new List<DiscoveryResult>();
         string json = await File.ReadAllTextAsync(_path);
-        return JsonSerializer.Deserialize<List<DiscoveryResult>>(json, _options) ?? new List<DiscoveryResult>();
+        var context = new CameraStoreJsonContext(_options);
+        return JsonSerializer.Deserialize(json, context.ListDiscoveryResult) ?? new List<DiscoveryResult>();
     }
 }
+
+[System.Text.Json.Serialization.JsonSerializable(typeof(List<ManagedSecurity.Discovery.DiscoveryResult>))]
+internal partial class CameraStoreJsonContext : System.Text.Json.Serialization.JsonSerializerContext { }

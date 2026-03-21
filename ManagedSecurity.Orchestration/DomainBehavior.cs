@@ -69,9 +69,8 @@ public class DomainBehavior : IAgentBehavior
             {
                 var result = await _udpClient!.ReceiveAsync(ct);
                 string json = Encoding.UTF8.GetString(result.Buffer);
-                var peer = JsonSerializer.Deserialize<PeerAnnouncement>(json, _options);
-                // Fallback attempt with reflection-free if needed, but the above should work if resolver is set.
-                // However, the error suggests it's NOT working.
+                var peer = JsonSerializer.Deserialize(json, DomainJsonContext.Default.PeerAnnouncement);
+
                 
                 if (peer != null && peer.Id != _agentId)
                 {
@@ -100,16 +99,9 @@ public class DomainBehavior : IAgentBehavior
     {
         var endpoint = new IPEndPoint(IPAddress.Broadcast, _discoveryPort);
         var announcement = new PeerAnnouncement(_agentId, _version, _role);
-        byte[] data;
-        // This is the CRITICAL part for AOT: Use the resolver if available
-        if (_options.TypeInfoResolver != null)
-        {
-            data = JsonSerializer.SerializeToUtf8Bytes(announcement, _options);
-        }
-        else 
-        {
-             data = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(announcement));
-        }
+        
+        // Execute zero-allocation JSON serialization formally
+        byte[] data = JsonSerializer.SerializeToUtf8Bytes(announcement, DomainJsonContext.Default.PeerAnnouncement);
 
         while (!ct.IsCancellationRequested)
         {
@@ -150,3 +142,6 @@ public class DomainBehavior : IAgentBehavior
 
     public record PeerAnnouncement(string Id, string Version, string Role);
 }
+
+[System.Text.Json.Serialization.JsonSerializable(typeof(ManagedSecurity.Orchestration.DomainBehavior.PeerAnnouncement))]
+internal partial class DomainJsonContext : System.Text.Json.Serialization.JsonSerializerContext { }

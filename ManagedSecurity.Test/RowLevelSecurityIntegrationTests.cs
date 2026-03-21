@@ -25,8 +25,7 @@ public class RowLevelSecurityIntegrationTests
     {
         // 1. Boot the ephemeral PostgreSQL container identically matching com_proj physical deployment.
         // This spins up a real database engine exclusively for this test method.
-        var postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+        var postgresContainer = new PostgreSqlBuilder("postgres:16-alpine")
             .WithDatabase("sentinel_test")
             .Build();
 
@@ -84,7 +83,7 @@ public class RowLevelSecurityIntegrationTests
             {
                 await using var cmd200 = tenant200Conn.CreateCommand();
                 cmd200.CommandText = "SET LOCAL ROLE test_rw; SELECT COUNT(*) FROM auth.Cameras;";
-                var count = (long)await cmd200.ExecuteScalarAsync();
+                var count = (long)(await cmd200.ExecuteScalarAsync() ?? 0L);
 
                 Assert.AreEqual(0, count, "RLS FAILED! Tenant 200 successfully retrieved Tenant 100's camera data.");
             }
@@ -96,7 +95,7 @@ public class RowLevelSecurityIntegrationTests
             {
                 await using var final100Cmd = final100Conn.CreateCommand();
                 final100Cmd.CommandText = "SET LOCAL ROLE test_rw; SELECT COUNT(*) FROM auth.Cameras;";
-                var count = (long)await final100Cmd.ExecuteScalarAsync();
+                var count = (long)(await final100Cmd.ExecuteScalarAsync() ?? 0L);
 
                 Assert.AreEqual(1, count, "RLS FAILED! Tenant 100 could not retrieve its own localized data.");
             }
@@ -112,8 +111,7 @@ public class RowLevelSecurityIntegrationTests
     [DoNotParallelize] // Needs monopoly over the ADO.NET connection pool to guarantee we pull the identical underlying Postgres socket.
     public async Task Npgsql_Connection_Pool_Mathematically_Scrubs_Tenant_Context_Via_Discard_All_Automatically()
     {
-        var postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+        var postgresContainer = new PostgreSqlBuilder("postgres:16-alpine")
             .WithDatabase("sentinel_test")
             .Build();
 
@@ -134,8 +132,8 @@ public class RowLevelSecurityIntegrationTests
 
                 await using var cmd = leasedConn.CreateCommand();
                 cmd.CommandText = "SELECT current_setting('app.current_tenant_id', true);";
-                var setting = (string)await cmd.ExecuteScalarAsync();
-                Assert.AreEqual("999", setting, "Factory failed to establish identity bound.");
+                var setting = (string?)await cmd.ExecuteScalarAsync();
+                Assert.AreEqual("999", setting ?? "", "Factory failed to establish identity bound.");
             } // leasedConn.DisposeAsync() pushes socket back into the pool, activating DISCARD ALL implicitly.
 
             // Phase 2: Open a raw ADO.NET connection completely bypassing the Factory bounds natively.
@@ -148,10 +146,10 @@ public class RowLevelSecurityIntegrationTests
 
                 await using var rogueCmd = rogueConn.CreateCommand();
                 rogueCmd.CommandText = "SELECT current_setting('app.current_tenant_id', true);";
-                var rogueSetting = (string)await rogueCmd.ExecuteScalarAsync();
+                var rogueSetting = (string?)await rogueCmd.ExecuteScalarAsync();
                 
                 // The Session State string must be completely scrubbed ("") natively by the pooling algorithm!
-                Assert.AreEqual("", rogueSetting, "CATASTROPHIC LEAK: Tenant ID context bled structurally across the ADO.NET Connection Pool!");
+                Assert.AreEqual("", rogueSetting ?? "", "CATASTROPHIC LEAK: Tenant ID context bled structurally across the ADO.NET Connection Pool!");
             }
         }
         finally

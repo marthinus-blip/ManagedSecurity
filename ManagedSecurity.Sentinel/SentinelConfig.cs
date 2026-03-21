@@ -8,7 +8,7 @@ namespace ManagedSecurity.Sentinel;
 public class SentinelConfig
 {
     [JsonPropertyName("log_level")]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<Microsoft.Extensions.Logging.LogLevel>))]
     public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
     [JsonPropertyName("vault_location")]

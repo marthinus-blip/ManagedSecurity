@@ -4,6 +4,12 @@ using System.Net;
 using ManagedSecurity.Orchestration.Arbitrator;
 
 // Generate ephemeral cert for the local network IP so browsers process the TLS handshake
+using System.Text;
+using ManagedSecurity.Common.Persistence;
+using ManagedSecurity.Common.Security;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 var rsa = RSA.Create(2048);
 var request = new CertificateRequest("CN=Sentinel_Gateway", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, false));
@@ -57,6 +63,35 @@ builder.Services.AddCors(options =>
     });
 });
 
+var jwtKey = builder.Configuration["JwtSettings:Key"] ?? "sentinel-local-dev-key-zero-trust-boundary-32-byte-secret";
+var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "SentinelMaster";
+var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "SentinelClients";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+// Data & Security Layer Injections natively structurally mapping 
+builder.Services.AddSingleton<ISentinelDbConnectionFactory>(sp => new SentinelDbConnectionFactory(SentinelDbConnectionFactory.DefaultConnectionString));
+builder.Services.AddTransient<ITenantProvider, SentinelDbTenantProvider>();
+builder.Services.AddTransient<IUserProvider, SentinelDbUserProvider>();
+builder.Services.AddTransient<IPasswordHasher, Argon2idPasswordHasher>();
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
+
 builder.Services.AddSingleton<IArbitratorRegistrar, ArbitratorRegistrar>();
 
 var app = builder.Build();
@@ -67,6 +102,8 @@ if (enableTls)
 }
 
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseWebSockets();
 
 app.MapGet("/api/arbitrator/register", async (HttpContext context, IArbitratorRegistrar registrar, string agentId) => 
@@ -91,6 +128,17 @@ app.MapGet("/api/arbitrator/register", async (HttpContext context, IArbitratorRe
     {
         context.Response.StatusCode = StatusCodes.Status400BadRequest;
     }
+});
+
+// Formal Authentication Route Native Mapping smoothly elegantly cleanly
+app.MapPost("/api/auth/login", async (HttpContext context, IAuthenticationService authService, [FromBody] ManagedSecurity.Common.Security.LoginRequest req) =>
+{
+    var token = await authService.AuthenticateAsync(req.EmailAddress, req.Password, req.TenantId, context.RequestAborted);
+    if (token == null)
+    {
+        return Results.Unauthorized();
+    }
+    return Results.Ok(new { Token = token });
 });
 
 app.MapReverseProxy();

@@ -29,7 +29,7 @@ public class SentinelAgent
 
     public IEnumerable<string> ActiveRoles => _behaviors.Keys;
 
-    public async Task AddBehaviorAsync(IAgentBehavior behavior)
+    public Task AddBehaviorAsync(IAgentBehavior behavior)
     {
         if (_behaviors.TryAdd(behavior.Name, behavior))
         {
@@ -37,6 +37,7 @@ public class SentinelAgent
             // Start the behavior in the background
             _ = behavior.StartAsync(_cts.Token);
         }
+        return Task.CompletedTask;
     }
 
     public async Task RemoveBehaviorAsync(string name)

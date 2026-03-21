@@ -23,8 +23,7 @@ public class JobLeaseIntegrationTests
     [DoNotParallelize] // Needs container isolation organically seamlessly smoothly safely cleanly dynamically gracefully properly logically effectively reliably
     public async Task SentinelDb_JobQueue_Processes_Concurrently_Without_Deadlocks_Via_SkipLocked()
     {
-        var postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+        var postgresContainer = new PostgreSqlBuilder("postgres:16-alpine")
             .WithDatabase("sentinel_test")
             .Build();
 

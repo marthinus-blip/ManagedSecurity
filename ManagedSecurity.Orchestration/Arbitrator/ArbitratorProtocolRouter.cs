@@ -85,7 +85,7 @@ public class ArbitratorProtocolRouter : IArbitratorProtocolRouter
         try
         {
             writtenBytes = SerializeFrameSynchronously(leaseBuffer, opCode, correlationId, payload.Span);
-            await webSocket.SendAsync(new ArraySegment<byte>(leaseBuffer, 0, writtenBytes), WebSocketMessageType.Binary, true, cancellationToken);
+            await webSocket!.SendAsync(new ArraySegment<byte>(leaseBuffer, 0, writtenBytes), WebSocketMessageType.Binary, true, cancellationToken);
         }
         finally
         {

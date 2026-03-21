@@ -230,8 +230,8 @@ class Program
                 PayloadBase64 = Convert.ToBase64String(frame.Payload)
             };
 
-            var options = new JsonSerializerOptions { WriteIndented = true, TypeInfoResolver = ManagedSecurity.Sentinel.Models.C2JsonContext.Default };
-            string output = JsonSerializer.Serialize(debugView, options);
+            var contextOptions = new JsonSerializerOptions { WriteIndented = true };
+            string output = JsonSerializer.Serialize(debugView, new ManagedSecurity.Sentinel.Models.C2JsonContext(contextOptions).C2DecodeRecord);
             Console.WriteLine(output);
             return 0;
         }
@@ -269,12 +269,8 @@ class Program
                 e.FullPath = Path.GetRelativePath(outputDir, e.FullPath).Replace("\\", "/");
             }
 
-            var options = new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true,
-                TypeInfoResolver = SentinelJsonContext.Default
-            };
-            string json = System.Text.Json.JsonSerializer.Serialize(entries, options);
+            var contextOptions = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+            string json = System.Text.Json.JsonSerializer.Serialize(entries, new SentinelJsonContext(contextOptions).ListVaultEntry);
             File.WriteAllText(outputPath, json);
             Console.WriteLine($"[INDEX] Exported {entries.Count} entries to {outputPath}");
         }
@@ -351,12 +347,8 @@ class Program
 
         if (!string.IsNullOrEmpty(exportPath))
         {
-            var options = new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true,
-                TypeInfoResolver = SentinelJsonContext.Default
-            };
-            string json = System.Text.Json.JsonSerializer.Serialize(results, options);
+            var contextOptions = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+            string json = System.Text.Json.JsonSerializer.Serialize(results, new SentinelJsonContext(contextOptions).ListDiscoveryResult);
             File.WriteAllText(exportPath, json);
             Console.WriteLine($"\n[DISCOVERY] Exported {results.Count} results to {exportPath}");
         }
@@ -904,9 +896,8 @@ class Program
 
                     if (url.Equals("/api/discovery", StringComparison.OrdinalIgnoreCase) && req.HttpMethod == "GET")
                     {
-                        var cameras = commander.GetCameras();
-                        var options = new System.Text.Json.JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default };
-                        byte[] json = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(cameras, options);
+                        var cameras = commander.GetCameras().ToList();
+                        byte[] json = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(cameras, SentinelJsonContext.Default.ListDiscoveryResult);
                         resp.ContentType = "application/json";
                         await resp.OutputStream.WriteAsync(json);
                         resp.Close();
@@ -914,8 +905,7 @@ class Program
                     else if (url.Equals("/api/agents", StringComparison.OrdinalIgnoreCase) && req.HttpMethod == "GET")
                     {
                         var agents = commander.GetActiveAgents().ToList();
-                        var options = new System.Text.Json.JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default };
-                        byte[] json = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(agents, options);
+                        byte[] json = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(agents, SentinelJsonContext.Default.ListActiveAgent);
                         resp.ContentType = "application/json";
                         await resp.OutputStream.WriteAsync(json);
                         resp.Close();
@@ -924,8 +914,7 @@ class Program
                     {
                         try 
                         {
-                            var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true, TypeInfoResolver = SentinelJsonContext.Default };
-                            var configReq = await System.Text.Json.JsonSerializer.DeserializeAsync<ConfigPayload>(req.InputStream, options);
+                            var configReq = await System.Text.Json.JsonSerializer.DeserializeAsync(req.InputStream, SentinelJsonContext.Default.ConfigPayload);
 
                             if (configReq != null && !string.IsNullOrEmpty(configReq.Url) && !string.IsNullOrEmpty(configReq.DisplayName)) 
                             {
@@ -956,8 +945,7 @@ class Program
                             e.FullPath = $"{config.GovernorProtocol}://{config.GovernorHost}:{config.GovernorPort}/api/vault/fetch/{Uri.EscapeDataString(e.FileName)}";
                         }
 
-                        var options = new JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default };
-                        byte[] json = JsonSerializer.SerializeToUtf8Bytes(entries, options);
+                        byte[] json = JsonSerializer.SerializeToUtf8Bytes(entries, SentinelJsonContext.Default.ListVaultEntry);
                         resp.ContentType = "application/json";
                         await resp.OutputStream.WriteAsync(json);
                         resp.Close();
@@ -988,8 +976,7 @@ class Program
                         int files = Directory.Exists(vaultDir) ? Directory.GetFiles(vaultDir, "*.msg").Length : 0;
                         var stats = new StorageStats(used, (long)(config.StorageQuotaGb * 1024 * 1024 * 1024), files);
                         
-                        var options = new JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default };
-                        byte[] json = JsonSerializer.SerializeToUtf8Bytes(stats, options);
+                        byte[] json = JsonSerializer.SerializeToUtf8Bytes(stats, SentinelJsonContext.Default.StorageStats);
                         resp.ContentType = "application/json";
                         await resp.OutputStream.WriteAsync(json);
                         resp.Close();
@@ -1613,7 +1600,7 @@ class Program
                     continue;
                 }
 
-                string safeName = camera.DisplayName.Replace(" ", "_").Replace("/", "_").Replace("\\", "_");
+                string safeName = camera.DisplayName?.Replace(" ", "_").Replace("/", "_").Replace("\\", "_") ?? "UNKNOWN";
                 string fileName = $"Sentinel_{safeName}_{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss}.msg";
                 string fullPath = Path.Combine(vaultDir, fileName);
                 string meta = $"CameraID={camera.Id};DisplayName={camera.DisplayName};StartTime={DateTimeOffset.UtcNow:O}";
@@ -1708,6 +1695,7 @@ internal class ConfigPayload
 [System.Text.Json.Serialization.JsonSerializable(typeof(SentinelConfig))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(OrchestrationConfig))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(StorageStats))]
+[System.Text.Json.Serialization.JsonSerializable(typeof(ConfigPayload))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(List<ManagedSecurity.Orchestration.CommanderBehavior.ActiveAgent>))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(ManagedSecurity.Common.Models.InferenceTelemetryEvent))]
 [System.Text.Json.Serialization.JsonSerializable(typeof(ManagedSecurity.Common.Models.BoundingBox))]

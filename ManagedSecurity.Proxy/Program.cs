@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Net;
+using ManagedSecurity.Orchestration.Arbitrator;
 
 // Generate ephemeral cert for the local network IP so browsers process the TLS handshake
 var rsa = RSA.Create(2048);
@@ -20,6 +21,7 @@ var builder = WebApplication.CreateBuilder(args);
 var enableTls = builder.Configuration.GetValue<bool>("ProxyServerSettings:EnableTls", true);
 var tlsPort = builder.Configuration.GetValue<int>("ProxyServerSettings:TlsPort", 5001);
 var httpPort = builder.Configuration.GetValue<int>("ProxyServerSettings:HttpPort", 5000);
+
 var enforceLightweightCiphers = builder.Configuration.GetValue<bool>("ProxyServerSettings:EnforceLightweightCiphers", true);
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
@@ -31,7 +33,6 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
         // 2026-03-18T19:17:01 (Why)
         // [thought TLS Overhead] Data payload is already E2EE; we only need HTTPS for the Secure Context
         // to enable the Web Crypto API on clients. Enforcing light cipher suites minimizes redundant encryption compute overhead.
-        
         serverOptions.ListenAnyIP(tlsPort, listenOptions =>
         {
             listenOptions.UseHttps(cert);
@@ -50,13 +51,13 @@ builder.Services.AddReverseProxy()
 
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(builder =>
+    options.AddDefaultPolicy(b =>
     {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
+        b.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
+
+builder.Services.AddSingleton<IArbitratorRegistrar, ArbitratorRegistrar>();
 
 var app = builder.Build();
 
@@ -66,5 +67,31 @@ if (enableTls)
 }
 
 app.UseCors();
+app.UseWebSockets();
+
+app.MapGet("/api/arbitrator/register", async (HttpContext context, IArbitratorRegistrar registrar, string agentId) => 
+{
+    if (context.WebSockets.IsWebSocketRequest)
+    {
+        using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+        registrar.RegisterTunnel(agentId, webSocket);
+        
+        var buffer = new byte[1024];
+        var receiveResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+        
+        while (!receiveResult.CloseStatus.HasValue)
+        {
+            receiveResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+        }
+        
+        registrar.RemoveTunnel(agentId);
+        await webSocket.CloseAsync(receiveResult.CloseStatus.Value, receiveResult.CloseStatusDescription, CancellationToken.None);
+    }
+    else
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+    }
+});
+
 app.MapReverseProxy();
 app.Run();

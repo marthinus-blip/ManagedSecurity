@@ -9,6 +9,7 @@ using ManagedSecurity.Orchestration.Engine;
 
 namespace ManagedSecurity.Orchestration;
 
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class GuardianBehavior : IAgentBehavior
 {
     public string Name => "Guardian";

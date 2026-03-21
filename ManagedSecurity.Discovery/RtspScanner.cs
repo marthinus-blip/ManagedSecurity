@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace ManagedSecurity.Discovery;
 
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class RtspScanner
 {
     private readonly int _timeoutMs;

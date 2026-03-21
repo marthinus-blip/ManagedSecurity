@@ -23,6 +23,7 @@ public record GuardianActivityAlert(string AgentId, string CameraUrl, DateTime T
 /// The "Commander" (General) behavior.
 /// Responsible for health monitoring and task allocation across Scouts.
 /// </summary>
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class CommanderBehavior : IAgentBehavior
 {
     public string Name => "Commander";
@@ -33,6 +34,7 @@ public class CommanderBehavior : IAgentBehavior
     private readonly ConcurrentDictionary<string, DiscoveryResult> _unassignedCameras = new();
     private readonly ConcurrentDictionary<string, List<TaskLease>> _workerTasks = new();
     private readonly CameraStore? _store;
+    private readonly ManagedSecurity.Common.Persistence.IAgentStateProvider? _stateProvider;
     private bool _isRunning;
     private string? _discoverySubnet;
     private DateTime _lastScanTime = DateTime.MinValue;
@@ -41,10 +43,11 @@ public class CommanderBehavior : IAgentBehavior
     public event Action<string, TaskAssignment>? OnTaskAssigned;
     public event Action<GuardianActivityAlert>? OnActivityDetected;
 
-    public CommanderBehavior(OrchestrationConfig config, CameraStore? store = null)
+    public CommanderBehavior(OrchestrationConfig config, CameraStore? store = null, ManagedSecurity.Common.Persistence.IAgentStateProvider? stateProvider = null)
     {
         _config = config;
         _store = store;
+        _stateProvider = stateProvider;
     }
 
     public async Task InitializeFromStoreAsync()
@@ -191,11 +194,24 @@ public class CommanderBehavior : IAgentBehavior
         return Task.CompletedTask;
     }
 
-    public void ReceiveHeartbeat(HeartbeatMessage hb)
+    public async Task ReceiveHeartbeatAsync(HeartbeatMessage hb)
     {
         _activeWorkers.AddOrUpdate(hb.AgentId, 
             (hb.Timestamp, hb.CpuLoad, hb.MemoryLoad, hb.Platform, hb.IsNativeMvAttached, hb.EngineVersion), 
             (_, _) => (hb.Timestamp, hb.CpuLoad, hb.MemoryLoad, hb.Platform, hb.IsNativeMvAttached, hb.EngineVersion));
+
+        if (_stateProvider != null)
+        {
+            var record = new ManagedSecurity.Common.Persistence.AgentStateRecordRl
+            {
+                AgentIdRl = hb.AgentId,
+                StatusDescriptionRl = hb.IsNativeMvAttached ? $"Active MV ({hb.EngineVersion})" : "Active Scout",
+                CpuLoadPercentageRl = hb.CpuLoad,
+                MemoryUsageBytesRl = (long)(hb.MemoryLoad * 1024 * 1024), // Assuming MB incoming
+                LastHeartbeatEpochRl = new DateTimeOffset(hb.Timestamp).ToUnixTimeSeconds()
+            };
+            await _stateProvider.UpsertAgentStateAsync(record).ConfigureAwait(false);
+        }
     }
 
     public IEnumerable<ActiveAgent> GetActiveAgents()

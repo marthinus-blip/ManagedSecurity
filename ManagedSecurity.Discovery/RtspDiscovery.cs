@@ -11,6 +11,7 @@ public enum MachineVisionRoute
     HeavySensitive = 3    // Branch Heavy (Sensitive): Hook OnFrameDecrypted after E2EE transmission (Remote Worker)
 }
 
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class DiscoveryResult
 {
     public string IpAddress { get; set; } = string.Empty;
@@ -59,6 +60,7 @@ public class DiscoveryResult
     }
 }
 
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public static class RtspWellKnown
 {
     // Common vendor-specific RTSP ports

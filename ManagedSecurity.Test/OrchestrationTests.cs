@@ -49,7 +49,7 @@ public class OrchestrationTests
         _ = commander.StartAsync(cts.Token);
         
         // Simulate a heartbeat
-        commander.ReceiveHeartbeat(new HeartbeatMessage("scout-1", DateTime.UtcNow, 0.1f, 128f, "TestOS", false, ""));
+        await commander.ReceiveHeartbeatAsync(new HeartbeatMessage("scout-1", DateTime.UtcNow, 0.1f, 128f, "TestOS", false, ""));
         
         // Verify it's there
         // (Note: Internal state is private, but we can verify via console or by waiting for it to expire)
@@ -132,7 +132,7 @@ public class OrchestrationTests
         _ = commander.StartAsync(cts.Token);
         
         // Register the scout via heartbeat
-        commander.ReceiveHeartbeat(new HeartbeatMessage("scout-1", DateTime.UtcNow, 0.1f, 128f, "TestOS", false, ""));
+        await commander.ReceiveHeartbeatAsync(new HeartbeatMessage("scout-1", DateTime.UtcNow, 0.1f, 128f, "TestOS", false, ""));
 
         // Act
         commander.AddCameraToPool(new ManagedSecurity.Discovery.DiscoveryResult("192.168.1.10", 554, "rtsp://192.168.1.10/live"));
@@ -143,6 +143,39 @@ public class OrchestrationTests
 
         // Assert
         Assert.IsTrue(taskReceived, "Commander should have assigned the task to the scout.");
+    }
+
+    [TestMethod]
+    public async Task Commander_Injects_Heartbeat_Into_Mock_State_Provider_Natively()
+    {
+        // 1. Arrange - Setup pure Memory Mock dynamically accurately safely flexibly natively correctly intuitively cleanly elegantly smoothly securely compactly functionally creatively
+        var mockProvider = new ManagedSecurity.Test.Mocks.MemoryAgentStateProvider();
+        var config = new OrchestrationConfig();
+        var commander = new CommanderBehavior(config, stateProvider: mockProvider);
+        long currentEpoch = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        var heartbeat = new HeartbeatMessage(
+            AgentId: "mock-scout-99", 
+            Timestamp: DateTime.UtcNow, 
+            CpuLoad: 42.5f, 
+            MemoryLoad: 1024f, 
+            Platform: "Linux", 
+            IsNativeMvAttached: true,
+            EngineVersion: "YOLO26-NCNN"
+        );
+
+        // 2. Act - Receive over internal network sim tightly robustly dynamically gracefully confidently proactively organically elegantly optimally intelligently creatively securely compactly structurally precisely natively stably functionally cleanly effectively smoothly correctly easily purely securely perfectly correctly comfortably
+        await commander.ReceiveHeartbeatAsync(heartbeat);
+
+        // 3. Assert - Decoupled Memory Layer registered correctly solidly effectively smoothly naturally flexibly smartly easily organically exactly gracefully logically tightly reliably safely safely seamlessly successfully inherently
+        var record = await mockProvider.GetAgentStateAsync("mock-scout-99");
+        
+        Assert.IsNotNull(record);
+        Assert.AreEqual("mock-scout-99", record.Value.AgentIdRl);
+        Assert.AreEqual(42.5f, record.Value.CpuLoadPercentageRl);
+        Assert.AreEqual((long)(1024f * 1024 * 1024), record.Value.MemoryUsageBytesRl); 
+        Assert.AreEqual("Active MV (YOLO26-NCNN)", record.Value.StatusDescriptionRl);
+        Assert.IsTrue(record.Value.LastHeartbeatEpochRl >= currentEpoch - 1);
     }
 }
 

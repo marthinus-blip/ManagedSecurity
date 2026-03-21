@@ -28,4 +28,7 @@ public class SentinelConfig
 
     [JsonPropertyName("storage_quota_gb")]
     public double StorageQuotaGb { get; set; } = 10.0;
+
+    [JsonPropertyName("arbitrator_url")]
+    public string? ArbitratorUrl { get; set; } = null;
 }

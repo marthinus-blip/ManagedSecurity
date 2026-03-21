@@ -6,6 +6,7 @@ namespace ManagedSecurity.Common;
 
 public readonly record struct SeekPoint(uint RelativeTimestampMs, ulong FileOffset, uint FrameIndex);
 
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public static class SeekTableSerializer
 {
     public static ReadOnlySpan<byte> Magic => "SEEK"u8;

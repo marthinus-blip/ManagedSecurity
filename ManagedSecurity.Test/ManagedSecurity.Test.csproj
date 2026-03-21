@@ -6,8 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Exe</OutputType>
-    <PublishAot>true</PublishAot>
     <EnableMSTestRunner>true</EnableMSTestRunner>
+    <!-- Testcontainers relies on Docker CLI JSON parsing which violates strict AOT reflection bounds natively. 
+         PublishAOT is shifted to the CLI argument in the Readme instead of a hardcoded property. -->
     
     <!-- Define custom symbols for compile-time switching -->
     <DefineConstants Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(DefineConstants);LINUX</DefineConstants>
@@ -22,6 +23,7 @@
     <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="8.0.8" />
     <PackageReference Include="Microsoft.Testing.Platform" Version="1.5.2" />
     <PackageReference Include="Microsoft.Testing.Extensions.TrxReport.Abstractions" Version="1.5.2" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.11.0" />
   </ItemGroup>
 
   <!-- Conditional platform-specific packages -->
@@ -37,6 +39,7 @@
     <ProjectReference Include="../ManagedSecurity.Common/ManagedSecurity.Common.csproj" />
     <ProjectReference Include="../ManagedSecurity.Core/ManagedSecurity.Core.csproj" />
     <ProjectReference Include="../ManagedSecurity.Orchestration/ManagedSecurity.Orchestration.csproj" />
+    <ProjectReference Include="..\ManagedSecurity.Protocol\ManagedSecurity.Protocol.csproj" />
   </ItemGroup>
 
 

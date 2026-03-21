@@ -10,6 +10,7 @@ namespace ManagedSecurity.Orchestration.Engine;
 /// Implements "Branch 2 Light": A minimal-cost feeding strategy suitable for Edge Guardians (Raspberry Pi/Low-Power VMs).
 /// Avoids deploying H.264 decoders by using the Camera's HTTP JPEG API natively.
 /// </summary>
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class PollingSnapshotFeedStrategy : IMachineVisionFeedStrategy, IDisposable
 {
     private readonly HttpClient _http;

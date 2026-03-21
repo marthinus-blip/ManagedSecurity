@@ -1,0 +1,39 @@
+.NET Testing Platform v1.5.2+a9abf8f90d (UTC 2025/01/21)
+[AGENT:71431b56] Activating behavior: Guardian
+[GUARDIAN] Scout 71431b56 started. Frequency: 3s
+[COMMANDER] General initialized. Governance interval: 0.1s
+[COMMANDER] General initialized. Governance interval: 0.1s
+[GUARDIAN] Scout test-scout started. Frequency: 3s
+[COMMANDER] Camera pooled: 192.168.1.10
+[AGENT:0940d1ee] Activating behavior: Commander
+[COMMANDER] General initialized. Governance interval: 20s
+[AGENT:0940d1ee] Activating behavior: Guardian
+[GUARDIAN] Scout 0940d1ee started. Frequency: 3s
+[AGENT:71431b56] Activating behavior: Commander
+[COMMANDER] General initialized. Governance interval: 20s
+[DEBUG] Session Key Hash: 25-3C-3A-DE
+[DEBUG] Session Key Hash: 25-3C-3A-DE
+[AOT Demo] Compile-time check: LINUX detected. Adding Systemd support.
+[COMMANDER] Assigned 192.168.1.10 to Scout scout-1
+[AOT Demo] Successfully protected and unprotected: AOT Mystery Package
+[GUARDIAN] Monitoring started: 6b69033bd529 (192.168.1.10) via LightPlain
+[COMMANDER] Scout scout-1 is MIA. Salvaging eyes...
+failed SentinelDb_Configuration_Detects_OutOfBand_Mutations_Via_PragmaDataVersion (388ms)
+  Microsoft.VisualStudio.TestTools.UnitTesting.AssertFailedException: Assert.IsTrue failed. Provider failed to trigger OnReload() after Native DB mutation.
+    at Microsoft.VisualStudio.TestTools.UnitTesting.Assert.ThrowAssertFailed(String assertionName, String message) in /_/src/TestFramework/TestFramework/Assertions/Assert.cs:60
+    at Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(Boolean condition, String message, Object[] parameters) in /_/src/TestFramework/TestFramework/Assertions/Assert.IsTrue.cs:97
+    at Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(Boolean condition, String message) in /_/src/TestFramework/TestFramework/Assertions/Assert.IsTrue.cs:56
+    at ManagedSecurity.Test.DataLayerIntegrationTests.SentinelDb_Configuration_Detects_OutOfBand_Mutations_Via_PragmaDataVersion() in /home/me/Repos/Dotnet/ManagedSecurity/ManagedSecurity.Test/DataLayerIntegrationTests.cs:104
+    at ManagedSecurity.Test.ManagedSecurity_Test_DataLayerIntegrationTests.<>c.<<-cctor>b__1_1>d.MoveNext() in /home/me/Repos/Dotnet/ManagedSecurity/ManagedSecurity.Test/MSTest.SourceGeneration/Microsoft.Testing.Framework.SourceGeneration.TestNodesGenerator/ManagedSecurity.Test.DataLayerIntegrationTests.g.cs:77
+
+Test run summary: Failed! - /home/me/Repos/Dotnet/ManagedSecurity/ManagedSecurity.Test/bin/Debug/net8.0/ManagedSecurity.Test.dll
+  total: 25
+  failed: 1
+  succeeded: 24
+  skipped: 0
+  duration: 616ms
+
+=== COMMAND LINE ===
+/usr/lib/dotnet/dotnet exec /home/me/Repos/Dotnet/ManagedSecurity/ManagedSecurity.Test/bin/Debug/net8.0/ManagedSecurity.Test.dll --internal-msbuild-node /tmp/3a1aff8d3ca84a3abe6e06321f0e1495/.p 
+
+

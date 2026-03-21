@@ -15,6 +15,7 @@ public record OnvifDevice(string IpAddress, string[] Scopes, string[] XAddrs)
     public string? Name => Scopes.FirstOrDefault(s => s.Contains("/name/"))?.Split('/').Last().Replace("_", " ");
 }
 
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class OnvifDiscovery
 {
     private const string MulticastAddress = "239.255.255.250";

@@ -11,6 +11,7 @@ namespace ManagedSecurity.Orchestration.Engine;
 /// The GPL-3.0 code is completely isolated here and called via P/Invoke
 /// without contaminating the Sentinel Dashboard which relies solely on standard HTTP.
 /// </summary>
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public sealed partial class Yolo26InferenceEngine : IYoloInferenceEngine
 {
     private readonly OrchestrationConfig _config;

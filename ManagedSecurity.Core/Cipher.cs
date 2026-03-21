@@ -20,6 +20,7 @@ namespace ManagedSecurity.Core
     }
 
 
+    [ManagedSecurity.Common.Attributes.AllowMagicValues]
     public class Cipher
     {
         private readonly IKeyProvider _keyProvider;

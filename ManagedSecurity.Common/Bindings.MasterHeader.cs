@@ -8,6 +8,7 @@ namespace ManagedSecurity.Common;
 /// Represents the unencrypted "Discovery Header" at the start of a ManagedSecurity stream.
 /// Designed for high-speed indexing and searching without cryptographic keys.
 /// </summary>
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public readonly ref struct MasterHeader
 {
     public const int FixedSize = 22;

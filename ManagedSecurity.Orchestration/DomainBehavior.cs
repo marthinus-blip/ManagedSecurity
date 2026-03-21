@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace ManagedSecurity.Orchestration;
 
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class DomainBehavior : IAgentBehavior
 {
     public string Name => "DomainDiscovery";

@@ -690,7 +690,7 @@ class Program
         var guardian = role == "scout" || role == "both" ? new GuardianBehavior(
             agent.Id, 
             config, 
-            hb => commander?.ReceiveHeartbeat(hb),
+            hb => { _ = commander?.ReceiveHeartbeatAsync(hb); },
             alert => 
             {
                 commander?.ReceiveAlert(alert);
@@ -725,6 +725,12 @@ class Program
         // Domain Discovery (Ghost Sentinel detection)
         var domain = new ManagedSecurity.Orchestration.DomainBehavior(agent.Id, version, role, new JsonSerializerOptions { TypeInfoResolver = SentinelJsonContext.Default });
         await agent.AddBehaviorAsync(domain);
+
+        if (!string.IsNullOrEmpty(sentinelConfig.ArbitratorUrl))
+        {
+            var connector = new ManagedSecurity.Orchestration.Arbitrator.ArbitratorConnectorBehavior(agent.Id, sentinelConfig.ArbitratorUrl);
+            await agent.AddBehaviorAsync(connector);
+        }
 
         if (inquisitor != null)
         {

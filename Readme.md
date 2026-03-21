@@ -143,6 +143,13 @@ Console.WriteLine($"Total Message Size: {header.TotalLength} bytes");
 ### Prerequisites
 - .NET 8 SDK or later
 - Linux: `zlib` development headers
+- **Docker Daemon:** Explicitly required for running `TestCategory="Integration"` environments (powered by `Testcontainers`) to mathematically simulate PostgreSQL RLS bounds natively without destroying the Host OS catalog.
+  - Ensure Docker is running and you have permissions to access the Docker socket:
+  ```bash
+  sudo systemctl enable --now docker
+  sudo chmod 666 /var/run/docker.sock
+  ```
+
 
 ### Linux NativeAOT Build
 
@@ -203,16 +210,27 @@ The `IKeyProvider` interface allows you to implement:
 
 ## 🧪 Testing
 
-The project uses `MSTest.Sdk` with `Microsoft.Testing.Platform` for NativeAOT-compatible test execution.
+The project uses `MSTest.Sdk` with `Microsoft.Testing.Platform` for NativeAOT-compatible test execution. Because Sentinel executes heavily asynchronous, multi-node concurrent routines (e.g., SQLite WAL interactions, distributed polling, and Edge network simulated workloads), tests are structurally categorized to protect rigorous build pipelines.
 
+### Test Categories
+
+1. **Standard CI Executions (Default)**
+   - Executes automatically via `dotnet test --filter "TestCategory!=Manual"`.
+   - Contains mathematically rigid unit tests and decoupled abstractions that safely run in highly parallelized MSBuild thread-pools.
+   - Example: Binary payload parsing, cryptographic stream assertions, and byte-shifting bounds natively.
+
+2. **Integration Operations (`[TestCategory("Integration")]`)**
+   - Must be invoked explicitly: `dotnet test --filter "TestCategory=Integration"`
+   - Launches ephemeral Docker instances (via `Testcontainers.PostgreSql`) to physically validate the data layer and architectural behaviors (e.g., PostgreSQL Row-Level Security injections).
+   - Contains tests explicitly marked with `[DoNotParallelize]` to prevent ephemeral Docker instance collision or volatile I/O conflicts locally.
+
+### Commands
 ```bash
-# Run all tests (11 total)
-./run-tests-all.sh
+# Run all stable automated CI tests safely (Unit Tests operating purely in RAM)
+dotnet test --filter "TestCategory!=Integration"
 
-# Expected output:
-# Test run summary: Passed!
-#   total: 14
-#   succeeded: 14
+# Run physical Database/Docker Integration tests sequentially natively
+dotnet test --filter "TestCategory=Integration"
 ```
 
 ## 📝 License (Multi-License Structure)

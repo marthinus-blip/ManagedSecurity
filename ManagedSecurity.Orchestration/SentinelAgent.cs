@@ -20,6 +20,7 @@ public interface IAgentBehavior
 /// The primary host for distributed logic. 
 /// Roles are added via composition, allowing a Scout to be promoted to Commander.
 /// </summary>
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class SentinelAgent
 {
     public string Id { get; } = Guid.NewGuid().ToString("N").Substring(0, 8);

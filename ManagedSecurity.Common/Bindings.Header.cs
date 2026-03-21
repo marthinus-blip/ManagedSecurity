@@ -1,7 +1,8 @@
-﻿namespace ManagedSecurity.Common;
+namespace ManagedSecurity.Common;
 
 public partial class Bindings {
 
+    [ManagedSecurity.Common.Attributes.AllowMagicValues]
     public readonly struct Header
     {
         public const int FixedHeaderSize = 4; // 32 bits = 4 bytes

@@ -7,6 +7,7 @@ namespace ManagedSecurity.Common.Logging;
 /// Sentinel Logger: High-performance, NativeAOT-compatible logger with AiThoughts support.
 /// Follows the Aesthetic of Verifiable Truth.
 /// </summary>
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public static partial class SentinelLogger
 {
     private static ILoggerFactory? _factory;

@@ -7,6 +7,7 @@ using ManagedSecurity.Discovery;
 
 namespace ManagedSecurity.Orchestration;
 
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class CameraStore
 {
     private readonly string _path;

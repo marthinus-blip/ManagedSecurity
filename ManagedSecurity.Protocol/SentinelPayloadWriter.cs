@@ -10,23 +10,30 @@ namespace ManagedSecurity.Protocol;
 /// </summary>
 public ref struct SentinelPayloadWriter
 {
+    private const string ErrSchemaBuffer = "Buffer is too small to contain a Schema ID";
+    private const string ErrOverrun = "Buffer overrun detected.";
+
     private readonly Span<byte> _buffer;
     private int _position;
+    private readonly uint _schemaId;
 
     /// <summary>
     /// Returns the exact slice of bytes actively written so far, ready for transport.
     /// </summary>
     public ReadOnlySpan<byte> WrittenSpan => _buffer.Slice(0, _position);
 
+    public int BytesWritten => _position;
+
     public SentinelPayloadWriter(Span<byte> destinationBuffer, uint schemaId)
     {
         if (destinationBuffer.Length < sizeof(uint))
-            throw new ArgumentOutOfRangeException(nameof(destinationBuffer), "Buffer is too small to contain a Schema ID");
+            throw new ArgumentOutOfRangeException(nameof(destinationBuffer), ErrSchemaBuffer);
 
         BinaryPrimitives.WriteUInt32LittleEndian(destinationBuffer, schemaId);
         
         _buffer = destinationBuffer;
         _position = sizeof(uint); // Starts at index 4
+        _schemaId = schemaId;
     }
 
     public void Write(int value)
@@ -94,6 +101,6 @@ public ref struct SentinelPayloadWriter
     private void EnsureCapacity(int bytesRequired)
     {
         if (_position + bytesRequired > _buffer.Length)
-            throw new InvalidOperationException($"Buffer overrun. Need {bytesRequired} more bytes, but only {_buffer.Length - _position} available.");
+            throw new InvalidOperationException(ErrOverrun);
     }
 }

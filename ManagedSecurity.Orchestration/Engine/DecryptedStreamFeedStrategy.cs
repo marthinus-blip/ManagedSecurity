@@ -12,6 +12,7 @@ namespace ManagedSecurity.Orchestration.Engine;
 /// Taps directly into the E2EE ManagedSecurityStream to receive Zero-Copy frames 
 /// as they are decrypted during live transmission or playback.
 /// </summary>
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public sealed class DecryptedStreamFeedStrategy : IMachineVisionFeedStrategy
 {
     private readonly ManagedSecurityStream _sourceStream;

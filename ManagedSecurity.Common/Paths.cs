@@ -3,6 +3,7 @@ using System.IO;
 
 namespace ManagedSecurity.Common;
 
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public static class Paths
 {
     private static string? _runtimeData;

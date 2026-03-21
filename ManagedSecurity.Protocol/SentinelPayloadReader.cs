@@ -10,11 +10,14 @@ namespace ManagedSecurity.Protocol;
 /// </summary>
 public ref struct SentinelPayloadReader
 {
+    private const string ErrSchemaBuffer = "Payload is too short to contain a Schema ID";
+    private const string ErrOverrun = "Buffer overrun detected.";
+    
     private readonly ReadOnlySpan<byte> _buffer;
     private int _position;
 
     /// <summary>
-    /// Gets the schema identifier defined by the first 32 bits of the transmission.
+    /// Evaluates the 32-bit integer immediately at the buffer head identifying the underlying schema variant.
     /// </summary>
     public uint SchemaId { get; }
 
@@ -24,10 +27,15 @@ public ref struct SentinelPayloadReader
     /// </summary>
     public bool IsCustomSchema => (SchemaId & 0x80000000) != 0;
 
+    /// <summary>
+    /// Allows external loops to know if the buffer span is completely exhausted or if another payload potentially resides adjacent.
+    /// </summary>
+    public bool EndOfStream => _position >= _buffer.Length;
+
     public SentinelPayloadReader(ReadOnlySpan<byte> payload)
     {
         if (payload.Length < sizeof(uint))
-            throw new ArgumentOutOfRangeException(nameof(payload), "Payload is too short to contain a Schema ID");
+            throw new ArgumentOutOfRangeException(nameof(payload), ErrSchemaBuffer);
 
         SchemaId = BinaryPrimitives.ReadUInt32LittleEndian(payload);
         _buffer = payload;
@@ -114,6 +122,6 @@ public ref struct SentinelPayloadReader
     private void EnsureCapacity(int bytesRequired)
     {
         if (_position + bytesRequired > _buffer.Length)
-            throw new InvalidOperationException($"Buffer overrun. Expected {bytesRequired} bytes but only {_buffer.Length - _position} available.");
+            throw new InvalidOperationException(ErrOverrun);
     }
 }

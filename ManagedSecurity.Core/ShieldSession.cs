@@ -8,6 +8,7 @@ namespace ManagedSecurity.Core;
 /// Implements a lightweight, zero-allocation handshake to establish 
 /// a secure session between a Camera (Producer) and a Hub (Consumer).
 /// </summary>
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public sealed class ShieldSession : IDisposable
 {
     private static ReadOnlySpan<byte> HandshakeMagic => "SHLD"u8;

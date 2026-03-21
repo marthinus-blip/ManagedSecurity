@@ -13,6 +13,7 @@ public enum ManagedSecurityStreamMode
     Decrypt
 }
 
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class ManagedSecurityStream : Stream
 {
     private readonly Stream _innerStream;

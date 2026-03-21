@@ -12,6 +12,7 @@ namespace ManagedSecurity.Orchestration.Engine;
 /// Responsible for deep inference on target streams, instantiated dynamically 
 /// when a Guardian triggers a high-confidence alert.
 /// </summary>
+[ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class InquisitorBehavior : IAgentBehavior
 {
     public static event Action<ManagedSecurity.Common.Models.InferenceTelemetryEvent>? OnTelemetryEmitted;

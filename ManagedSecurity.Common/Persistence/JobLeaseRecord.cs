@@ -20,5 +20,11 @@ public readonly record struct JobLeaseRecord
     public long AcquiredAtEpoch { get; init; }
     public long ExpiresAtEpoch { get; init; }
 
+    // Temporal State Tracking Bounds [LSN-OPT]
+    public int RetryCount { get; init; }
+    public int MaxRetries { get; init; }
+    public string? StatePayload { get; init; }
+    public string? LastError { get; init; }
+
     public static long CurrentEpoch => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 }

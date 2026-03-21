@@ -46,7 +46,11 @@ public class JobLeaseIntegrationTests
                         Payload TEXT NOT NULL,
                         AssignedAgentId TEXT,
                         AcquiredAtEpoch BIGINT NOT NULL DEFAULT 0,
-                        ExpiresAtEpoch BIGINT NOT NULL DEFAULT 0
+                        ExpiresAtEpoch BIGINT NOT NULL DEFAULT 0,
+                        RetryCount INT NOT NULL DEFAULT 0,
+                        MaxRetries INT NOT NULL DEFAULT 3,
+                        StatePayload TEXT,
+                        LastError TEXT
                     );
 
                     -- Insert 10 pending jobs mathematically natively smoothly gracefully elegantly efficiently sequentially stably

@@ -21,5 +21,8 @@ public enum SystemOpCode : ushort
     // Orchestration & Jobs (0xFF20 - 0xFF2F)
     CameraList = 0xFF20,
     ActiveJobs = 0xFF21,
-    JobSubmission = 0xFF22
+    JobSubmission = 0xFF22,
+    JobStateUpdate = 0xFF23,
+    JobFailure = 0xFF24,
+    JobCompletion = 0xFF25
 }

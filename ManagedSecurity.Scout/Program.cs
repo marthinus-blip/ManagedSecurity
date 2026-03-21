@@ -24,6 +24,7 @@ public class Program
             })
             .ConfigureServices((hostContext, services) =>
             {
+                services.AddSingleton<AgentJobProcessor, DiagnosticJobProcessor>();
                 services.AddHostedService<ScoutWorker>();
             })
             .Build();

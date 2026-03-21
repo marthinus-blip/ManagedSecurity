@@ -825,7 +825,9 @@ class Program
         var globalArbitrator = new ManagedSecurity.Orchestration.Arbitrator.ArbitratorRegistrar();
         
         using var tempLoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
-        var globalProtocolRouter = new ManagedSecurity.Orchestration.Arbitrator.ArbitratorProtocolRouter(globalArbitrator, tempLoggerFactory.CreateLogger<ManagedSecurity.Orchestration.Arbitrator.ArbitratorProtocolRouter>());
+        var emptyServices = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        var emptyProvider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(emptyServices);
+        var globalProtocolRouter = new ManagedSecurity.Orchestration.Arbitrator.ArbitratorProtocolRouter(globalArbitrator, tempLoggerFactory.CreateLogger<ManagedSecurity.Orchestration.Arbitrator.ArbitratorProtocolRouter>(), emptyProvider);
         
         if (commander != null)
         {

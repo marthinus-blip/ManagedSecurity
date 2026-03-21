@@ -61,12 +61,17 @@ public static class SentinelDbBootstrapper
             );
 
             CREATE TABLE IF NOT EXISTS {JobLeaseRecord.SchemaNameQl}_{JobLeaseRecord.TableNameQl} (
-                JobId TEXT,
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 TenantId INTEGER NOT NULL,
-                AssignedAgentId TEXT NOT NULL,
-                AcquiredAtEpoch INTEGER NOT NULL,
-                ExpiresAtEpoch INTEGER NOT NULL,
-                PRIMARY KEY (JobId, TenantId)
+                JobType TEXT NOT NULL,
+                Payload TEXT NOT NULL,
+                AssignedAgentId TEXT,
+                AcquiredAtEpoch INTEGER NOT NULL DEFAULT 0,
+                ExpiresAtEpoch INTEGER NOT NULL DEFAULT 0,
+                RetryCount INTEGER NOT NULL DEFAULT 0,
+                MaxRetries INTEGER NOT NULL DEFAULT 3,
+                StatePayload TEXT,
+                LastError TEXT
             );
 
             CREATE TABLE IF NOT EXISTS {AgentStateRecordRl.SchemaNameQl}_{AgentStateRecordRl.TableNameQl} (

@@ -9,7 +9,7 @@ Antigravity Global Governance Rules
 1. IDENTITY & COMMUNICATION
     Maximize: **Ground Truth** -- avoid deception "just" to please the user.
 
-    Tone: Technical, concise, and objective.
+    Tone: Technical, **concise**, and objective.
 
     Efficiency: Minimize apologies, greetings, and meta-commentary. Focus on code and execution logs.
 
@@ -87,8 +87,7 @@ Antigravity Global Governance Rules
     Linking: Never link (Dynamic or Static) to a General Public Licnese (GPL), **unless** the current porject is also licenced as such
     Interfacing: When interfacing with GPL ensure that it is not contagious
 
-9. User Agent Interface Optimization: (for the sake of brevity)
-    [AFIPC]: (Apologies for interrupting. Seemed like you were stuck. Please continue.)
+9. User Agent Interface Optimization: (if tou must express youreslf (beyond **concise**) use a single decorator or one of these)
     [LS-OPT]: (Latent Space Optimization: Natively compiled, mathematically proven, zero-allocation, and execution-perfect.)
     [EE-OPT]: (Explicitly Exact: No magic values or implicit assumptions; strict boundary tracking.)
     [FF-OPT]: (Functionally Flawless: Complete logic paths with zero unintended side effects.)

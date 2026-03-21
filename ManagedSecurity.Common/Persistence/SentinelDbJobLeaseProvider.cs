@@ -34,7 +34,8 @@ public sealed class SentinelDbJobLeaseProvider : IJobLeaseProvider
             WITH UnlockedJob AS (
                 SELECT Id 
                 FROM {JobLeaseRecord.SchemaNameQl}.{JobLeaseRecord.TableNameQl}
-                WHERE AssignedAgentId IS NULL OR ExpiresAtEpoch < @now
+                WHERE (AssignedAgentId IS NULL OR ExpiresAtEpoch < @now) 
+                  AND COALESCE(AssignedAgentId, '') != 'FAILED'
                 ORDER BY Id ASC
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
@@ -48,7 +49,11 @@ public sealed class SentinelDbJobLeaseProvider : IJobLeaseProvider
             RETURNING {JobLeaseRecord.SchemaNameQl}.{JobLeaseRecord.TableNameQl}.Id, 
                       {JobLeaseRecord.SchemaNameQl}.{JobLeaseRecord.TableNameQl}.TenantId, 
                       {JobLeaseRecord.SchemaNameQl}.{JobLeaseRecord.TableNameQl}.JobType, 
-                      {JobLeaseRecord.SchemaNameQl}.{JobLeaseRecord.TableNameQl}.Payload;
+                      {JobLeaseRecord.SchemaNameQl}.{JobLeaseRecord.TableNameQl}.Payload,
+                      {JobLeaseRecord.SchemaNameQl}.{JobLeaseRecord.TableNameQl}.RetryCount,
+                      {JobLeaseRecord.SchemaNameQl}.{JobLeaseRecord.TableNameQl}.MaxRetries,
+                      {JobLeaseRecord.SchemaNameQl}.{JobLeaseRecord.TableNameQl}.StatePayload,
+                      {JobLeaseRecord.SchemaNameQl}.{JobLeaseRecord.TableNameQl}.LastError;
         ";
 
         command.CommandText = fetchQueryQl;
@@ -70,6 +75,10 @@ public sealed class SentinelDbJobLeaseProvider : IJobLeaseProvider
             TenantId = reader.GetInt64(1),
             JobType = reader.GetString(2),
             Payload = reader.GetString(3),
+            RetryCount = reader.GetInt32(4),
+            MaxRetries = reader.GetInt32(5),
+            StatePayload = reader.IsDBNull(6) ? null : reader.GetString(6),
+            LastError = reader.IsDBNull(7) ? null : reader.GetString(7),
             AssignedAgentId = agentId,
             AcquiredAtEpoch = now,
             ExpiresAtEpoch = expires
@@ -94,6 +103,49 @@ public sealed class SentinelDbJobLeaseProvider : IJobLeaseProvider
 
         command.CommandText = deleteQueryQl;
 
+        command.Parameters.Add(new NpgsqlParameter("@jobId", jobId));
+        command.Parameters.Add(new NpgsqlParameter("@agentId", agentId));
+
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+    }
+
+    public async Task RecordCheckpointAsync(long jobId, string agentId, string statePayload, int extensionSeconds)
+    {
+        await using var connection = await _connectionFactory.CreateConnectionAsync().ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+
+        long extendedExpiration = JobLeaseRecord.CurrentEpoch + extensionSeconds;
+        
+        command.CommandText = $@"
+            UPDATE {JobLeaseRecord.SchemaNameQl}.{JobLeaseRecord.TableNameQl}
+            SET StatePayload = @state,
+                ExpiresAtEpoch = @ext
+            WHERE Id = @jobId AND AssignedAgentId = @agentId;
+        ";
+
+        command.Parameters.Add(new NpgsqlParameter("@state", statePayload));
+        command.Parameters.Add(new NpgsqlParameter("@ext", extendedExpiration));
+        command.Parameters.Add(new NpgsqlParameter("@jobId", jobId));
+        command.Parameters.Add(new NpgsqlParameter("@agentId", agentId));
+
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+    }
+
+    public async Task FailJobAsync(long jobId, string agentId, string errorMessage)
+    {
+        await using var connection = await _connectionFactory.CreateConnectionAsync().ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+
+        command.CommandText = $@"
+            UPDATE {JobLeaseRecord.SchemaNameQl}.{JobLeaseRecord.TableNameQl}
+            SET RetryCount = RetryCount + 1,
+                LastError = @error,
+                AssignedAgentId = CASE WHEN RetryCount + 1 >= MaxRetries THEN 'FAILED' ELSE NULL END,
+                ExpiresAtEpoch = CASE WHEN RetryCount + 1 >= MaxRetries THEN 0 ELSE 0 END
+            WHERE Id = @jobId AND AssignedAgentId = @agentId;
+        ";
+
+        command.Parameters.Add(new NpgsqlParameter("@error", errorMessage));
         command.Parameters.Add(new NpgsqlParameter("@jobId", jobId));
         command.Parameters.Add(new NpgsqlParameter("@agentId", agentId));
 

@@ -22,7 +22,8 @@ public class ScoutWorker : BackgroundService
     private const int HeartbeatDelayMs = 10000;
     private const int ReconnectDelayMs = 5000;
     private const int MaxPayloadSpanSize = 256;
-    private const string ErrMissingConstraints = "Configuration constraints missing natively (Target/AgentId) [FF-OPT].";
+    private const int MaxJobExecutionMinutes = 60;
+    private const string ErrMissingConstraints = "Configuration constraints missing natively (Target/AgentId) .";
     private const string DefaultHeartbeatStatus = "NOMINAL_EDGE_STATE_AOT";
     private const int DefaultHeartbeatCpu = 15;
     private const float DefaultHeartbeatMem = 3.1f;
@@ -40,8 +41,10 @@ public class ScoutWorker : BackgroundService
     private readonly ILogger<ScoutWorker> _logger;
     private readonly string _agentId;
     private readonly Uri _edgeUri;
+    private readonly System.Collections.Generic.IEnumerable<AgentJobProcessor> _jobProcessors;
+    private ClientWebSocket? _activeTunnel;
 
-    public ScoutWorker(IConfiguration config, ILogger<ScoutWorker> logger)
+    public ScoutWorker(IConfiguration config, ILogger<ScoutWorker> logger, System.Collections.Generic.IEnumerable<AgentJobProcessor> jobProcessors)
     {
         _config = config;
         _logger = logger;
@@ -56,6 +59,29 @@ public class ScoutWorker : BackgroundService
         
         _agentId = agentIdConfig;
         _edgeUri = new Uri(targetConfig);
+        _jobProcessors = jobProcessors;
+
+        foreach (var proc in _jobProcessors)
+        {
+            proc.TunnelCheckpointDispatcher = DispatchCheckpointAsync;
+        }
+    }
+
+    private async Task DispatchCheckpointAsync(long jobId, string state, int extensionSeconds)
+    {
+        if (_activeTunnel?.State != WebSocketState.Open) return;
+
+        var payload = new JobStateUpdatePayload { JobId = jobId, StatePayload = state, RequestedExtensionSeconds = extensionSeconds };
+        byte[] buffer = SerializePayload((ushort)SystemOpCode.JobStateUpdate, payload, 0, out int writtenBytes);
+        
+        try
+        {
+            await _activeTunnel.SendAsync(new ArraySegment<byte>(buffer, 0, writtenBytes), WebSocketMessageType.Binary, true, CancellationToken.None);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -72,6 +98,7 @@ public class ScoutWorker : BackgroundService
                 _logger.LogInformation(LogConnecting);
                 await client.ConnectAsync(_edgeUri, stoppingToken);
                 _logger.LogInformation(LogConnected);
+                _activeTunnel = client;
                 
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
                 
@@ -80,6 +107,7 @@ public class ScoutWorker : BackgroundService
                 
                 await Task.WhenAny(receiveTask, heartbeatTask);
                 linkedCts.Cancel();
+                _activeTunnel = null;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -114,16 +142,63 @@ public class ScoutWorker : BackgroundService
     {
         if (ArbitratorFrame.TryParse(new ReadOnlySpan<byte>(buffer, 0, count), out var frame))
         {
-            _logger.LogInformation(string.Format(LogIntercepted, frame.OpCode, frame.CorrelationId));
+            if (frame.OpCode != (ushort)SystemOpCode.CommandAck)
+            {
+                _logger.LogInformation(string.Format(LogIntercepted, frame.OpCode, frame.CorrelationId));
+            }
             
             if (frame.OpCode == (ushort)SystemOpCode.CameraList)
             {
                 var cameras = MemoryPack.MemoryPackSerializer.Deserialize<CameraListPayload>(frame.Payload);
                 _logger.LogInformation(string.Format(LogCameras, cameras.Cameras?.Length ?? 0));
             }
+            else if (frame.OpCode == (ushort)SystemOpCode.JobSubmission)
+            {
+                var jobPayload = MemoryPack.MemoryPackSerializer.Deserialize<JobSubmissionPayload>(frame.Payload);
+                _ = Task.Run(() => SafeExecuteJobAsync(jobPayload));
+            }
             else if (frame.OpCode == (ushort)SystemOpCode.CommandAck)
             {
-                _logger.LogInformation(LogAck);
+                // Mute verbose Acks to clear noise.
+            }
+        }
+    }
+
+    private async Task SafeExecuteJobAsync(JobSubmissionPayload submission)
+    {
+        var processor = System.Linq.Enumerable.FirstOrDefault(_jobProcessors, p => p.TargetJobType == submission.JobType);
+        if (processor == null || _activeTunnel?.State != WebSocketState.Open) return;
+
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(MaxJobExecutionMinutes));
+            string? result = await processor.ExecuteJobAsync(submission.JobId, submission.Payload, submission.StatePayload, cts.Token);
+            
+            var completion = new JobCompletionPayload { JobId = submission.JobId, OutputPayload = result };
+            byte[] completionBuffer = SerializePayload((ushort)SystemOpCode.JobCompletion, completion, 0, out int writtenLength);
+            
+            try
+            {
+                await _activeTunnel.SendAsync(new ArraySegment<byte>(completionBuffer, 0, writtenLength), WebSocketMessageType.Binary, true, CancellationToken.None);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(completionBuffer);
+            }
+        }
+        catch(Exception ex)
+        {
+            var failure = new JobFailurePayload { JobId = submission.JobId, ErrorMessage = ex.Message };
+            byte[] failureBuffer = SerializePayload((ushort)SystemOpCode.JobFailure, failure, 0, out int writtenLength);
+            
+            try
+            {
+                if (_activeTunnel?.State == WebSocketState.Open)
+                    await _activeTunnel.SendAsync(new ArraySegment<byte>(failureBuffer, 0, writtenLength), WebSocketMessageType.Binary, true, CancellationToken.None);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(failureBuffer);
             }
         }
     }
@@ -136,24 +211,25 @@ public class ScoutWorker : BackgroundService
         {
             correlationId++;
             
-            // Serialize and multiplex exactly avoiding Ref Struct captures explicitly cleanly
             byte[] multiplexBuffer = SerializeHeartbeatSafely(correlationId, out int writtenBytes);
+            byte[] pollBuffer = SerializeEmptyFrameSynchronously((ushort)SystemOpCode.ActiveJobs, 0, out int writtenPollBytes);
             
             try
             {
                 await client.SendAsync(new ArraySegment<byte>(multiplexBuffer, 0, writtenBytes), WebSocketMessageType.Binary, true, token);
+                await client.SendAsync(new ArraySegment<byte>(pollBuffer, 0, writtenPollBytes), WebSocketMessageType.Binary, true, token);
             }
             finally
             {
                 ArrayPool<byte>.Shared.Return(multiplexBuffer);
+                ArrayPool<byte>.Shared.Return(pollBuffer);
             }
             
             await Task.Delay(HeartbeatDelayMs, token); 
         }
     }
 
-    // A strictly synchronous memory envelope bounding the ref struct natively physically optimally [XEIG-OPT].
-    // Note: We bypass string literal bans by mapping the static status constant natively natively explicitly explicitly dynamically intelligently cleanly perfectly correctly creatively rationally flexibly natively smoothly flexibly organically effectively accurately purely structurally fully natively mathematically elegantly implicitly explicitly fully actively properly flawlessly correctly seamlessly safely fluently solidly explicitly correctly exactly purely safely logically cleanly intelligently flawlessly properly solidly explicitly mathematically explicitly seamlessly effortlessly seamlessly properly structurally fully safely flexibly naturally correctly fluently organically elegantly cleanly implicitly flexibly beautifully compactly actively inherently naturally flexibly perfectly explicitly fluently stably seamlessly inherently purely fluently fluently elegantly flawlessly purely inherently inherently functionally efficiently safely expertly.
+    // A strictly synchronous memory envelope bounding the ref struct natively physically optimally.
     private byte[] SerializeHeartbeatSafely(uint correlationId, out int writtenBytes)
     {
         var heartbeat = new HeartbeatPayload
@@ -174,6 +250,30 @@ public class ScoutWorker : BackgroundService
         var frame = new ArbitratorFrame(1, (ushort)SystemOpCode.Heartbeat, correlationId, payloadSpan);
         writtenBytes = frame.WriteTo(multiplexBuffer);
         
+        return multiplexBuffer;
+    }
+
+    private byte[] SerializePayload<T>(ushort opCode, T payload, uint correlationId, out int writtenBytes) 
+    {
+        var bufferWriter = new ArrayBufferWriter<byte>(MaxPayloadSpanSize);
+        MemoryPack.MemoryPackSerializer.Serialize(bufferWriter, payload);
+        
+        var payloadSpan = bufferWriter.WrittenSpan;
+        int totalFrameLength = ArbitratorFrame.HeaderSize + payloadSpan.Length;
+        
+        byte[] multiplexBuffer = ArrayPool<byte>.Shared.Rent(totalFrameLength);
+        
+        var frame = new ArbitratorFrame(1, opCode, correlationId, payloadSpan);
+        writtenBytes = frame.WriteTo(multiplexBuffer);
+        
+        return multiplexBuffer;
+    }
+
+    private byte[] SerializeEmptyFrameSynchronously(ushort opCode, uint correlationId, out int writtenBytes) 
+    {
+        byte[] multiplexBuffer = ArrayPool<byte>.Shared.Rent(ArbitratorFrame.HeaderSize);
+        var frame = new ArbitratorFrame(1, opCode, correlationId, ReadOnlySpan<byte>.Empty);
+        writtenBytes = frame.WriteTo(multiplexBuffer);
         return multiplexBuffer;
     }
 }

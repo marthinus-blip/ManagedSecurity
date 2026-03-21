@@ -9,30 +9,26 @@ using ManagedSecurity.Common.Attributes;
 namespace ManagedSecurity.Common.Persistence;
 
 [AllowMagicValues]
-public class SentinelPostgresTenantProvider : ITenantProvider
+public class SentinelDbTenantProvider : ITenantProvider
 {
-    // Following .standards.md: Zero Magic Values & Explicit Domain Schemas
-    public const string SchemaNameQl = "auth";
-    public const string TenantTableNameQl = "Tenants";
-    public const string JunctionTableNameQl = "TenantUserAccess";
-
     private readonly ISentinelDbConnectionFactory _connectionFactory;
 
-    public SentinelPostgresTenantProvider(ISentinelDbConnectionFactory connectionFactory)
+    public SentinelDbTenantProvider(ISentinelDbConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
     }
 
     public async Task<IReadOnlyList<TenantRecord>> GetAuthorizedTenantsForUserAsync(long userId, CancellationToken cancellationToken = default)
     {
-        // Executes an explicit JOIN across the Many-to-Many junction mapping required gracefully 
-        // to populate the User's Tenant Switcher. Evaluates exclusively non-deleted identities.
-        const string query = $@"
+        string tTable = _connectionFactory.Dialect.TranslateTableNamespace(TenantRecord.SchemaNameQl, TenantRecord.TableNameQl);
+        string tuaTable = _connectionFactory.Dialect.TranslateTableNamespace(TenantUserAccessRecord.SchemaNameQl, TenantUserAccessRecord.TableNameQl);
+
+        string query = $@"
             SELECT 
                 t.TenantId, t.OrganizationName, t.IsDeleted, 
                 t.CreatedAtEpoch, t.UpdatedAtEpoch, t.UpdatedByUserId
-            FROM {SchemaNameQl}.{TenantTableNameQl} t
-            INNER JOIN {SchemaNameQl}.{JunctionTableNameQl} tua 
+            FROM {tTable} t
+            INNER JOIN {tuaTable} tua 
                 ON t.TenantId = tua.TenantId
             WHERE tua.UserId = @UserId AND t.IsDeleted = false;
         ";
@@ -65,8 +61,10 @@ public class SentinelPostgresTenantProvider : ITenantProvider
 
     public async Task<long> CreateTenantAsync(TenantRecord record, CancellationToken cancellationToken = default)
     {
-        const string query = $@"
-            INSERT INTO {SchemaNameQl}.{TenantTableNameQl} 
+        string tTable = _connectionFactory.Dialect.TranslateTableNamespace(TenantRecord.SchemaNameQl, TenantRecord.TableNameQl);
+
+        string query = $@"
+            INSERT INTO {tTable} 
             (OrganizationName, IsDeleted, CreatedAtEpoch, UpdatedAtEpoch, UpdatedByUserId)
             VALUES (@OrganizationName, @IsDeleted, @CreatedAtEpoch, @UpdatedAtEpoch, @UpdatedByUserId)
             RETURNING TenantId;
@@ -88,8 +86,10 @@ public class SentinelPostgresTenantProvider : ITenantProvider
 
     public async Task GrantTenantAccessAsync(TenantUserAccessRecord record, CancellationToken cancellationToken = default)
     {
-        const string query = $@"
-            INSERT INTO {SchemaNameQl}.{JunctionTableNameQl} 
+        string tuaTable = _connectionFactory.Dialect.TranslateTableNamespace(TenantUserAccessRecord.SchemaNameQl, TenantUserAccessRecord.TableNameQl);
+
+        string query = $@"
+            INSERT INTO {tuaTable} 
             (TenantId, UserId, RoleLevel, GrantedAtEpoch)
             VALUES (@TenantId, @UserId, @RoleLevel, @GrantedAtEpoch);
         ";

@@ -8,15 +8,11 @@ using ManagedSecurity.Common.Attributes;
 namespace ManagedSecurity.Common.Persistence;
 
 [AllowMagicValues]
-public class SentinelPostgresUserProvider : IUserProvider
+public class SentinelDbUserProvider : IUserProvider
 {
-    // Following .standards.md: Zero Magic Values & Explicit Schemas
-    public const string SchemaNameQl = "auth";
-    public const string TableNameQl = "Users";
-
     private readonly ISentinelDbConnectionFactory _connectionFactory;
 
-    public SentinelPostgresUserProvider(ISentinelDbConnectionFactory connectionFactory)
+    public SentinelDbUserProvider(ISentinelDbConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
     }
@@ -25,11 +21,13 @@ public class SentinelPostgresUserProvider : IUserProvider
     {
         // Note: PostgreSQL Partial Index (`WHERE IsDeleted = false`) enforces uniqueness natively.
         // We implicitly query active identities only.
-        const string query = $@"
+        string uTable = _connectionFactory.Dialect.TranslateTableNamespace(UserRecord.SchemaNameQl, UserRecord.TableNameQl);
+
+        string query = $@"
             SELECT 
                 UserId, EmailAddress, PasswordHash, SecurityStamp, IsDeleted, 
                 CreatedAtEpoch, UpdatedAtEpoch, UpdatedByUserId
-            FROM {SchemaNameQl}.{TableNameQl}
+            FROM {uTable}
             WHERE EmailAddress = @EmailAddress AND IsDeleted = false;
         ";
 
@@ -61,8 +59,10 @@ public class SentinelPostgresUserProvider : IUserProvider
 
     public async Task<long> CreateUserAsync(UserRecord record, CancellationToken cancellationToken = default)
     {
-        const string query = $@"
-            INSERT INTO {SchemaNameQl}.{TableNameQl} 
+        string uTable = _connectionFactory.Dialect.TranslateTableNamespace(UserRecord.SchemaNameQl, UserRecord.TableNameQl);
+
+        string query = $@"
+            INSERT INTO {uTable} 
             (EmailAddress, PasswordHash, SecurityStamp, IsDeleted, CreatedAtEpoch, UpdatedAtEpoch, UpdatedByUserId)
             VALUES (@EmailAddress, @PasswordHash, @SecurityStamp, @IsDeleted, @CreatedAtEpoch, @UpdatedAtEpoch, @UpdatedByUserId)
             RETURNING UserId;

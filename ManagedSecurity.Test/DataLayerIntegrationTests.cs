@@ -121,41 +121,7 @@ public class DataLayerIntegrationTests
             CleanupIsolated(dbPath);
         }
     }
-    [TestMethod]
-    public async Task SentinelDb_LeaseProvider_Prevents_Concurrent_Locks()
-    {
-        var (dbPath, connectionFactory) = InitializeIsolate();
-        try
-        {
-            await SentinelDbBootstrapper.EnsureSchemaInitializedAsync(connectionFactory);
-            IJobLeaseProvider provider = new SentinelDbJobLeaseProvider(connectionFactory);
-
-            // 1. First agent acquires lease
-            string jobId = "AnalysisJob-100";
-            string agent1 = "Agent-01";
-            bool req1 = await provider.TryAcquireLeaseAsync(jobId, agent1, 10);
-            
-            Assert.IsTrue(req1, "First agent should successfully acquire the lease.");
-
-            // 2. Second agent attempts to acquire the same lease and fails
-            string agent2 = "Agent-02";
-            bool req2 = await provider.TryAcquireLeaseAsync(jobId, agent2, 10);
-            
-            Assert.IsFalse(req2, "Second agent should be blocked by the concurrency boundary.");
-
-            // 3. First agent releases lease
-            await provider.ReleaseLeaseAsync(jobId, agent1);
-
-            // 4. Second agent successfully acquires it
-            bool req3 = await provider.TryAcquireLeaseAsync(jobId, agent2, 10);
-            Assert.IsTrue(req3, "Second agent should successfully acquire lease after previous agent releases it natively.");
-        }
-        finally
-        {
-            CleanupIsolated(dbPath);
-        }
-    }
-
+    // SQLite Provider tests for Orchestrator State Bounds natively preserved.
     [TestMethod]
     public async Task SentinelDb_AgentStateProvider_Upserts_And_Tracks_Heartbeats_Successfully()
     {

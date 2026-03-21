@@ -4,10 +4,15 @@ using System.Threading.Tasks;
 namespace ManagedSecurity.Common.Persistence;
 
 /// <summary>
-/// Exposes exactly-once persistence concurrency locking dynamically cleanly smoothly reliably efficiently flexibly gracefully.
+/// Exposes exactly-once pessimistic concurrency distribution locking natively efficiently gracefully.
 /// </summary>
 public interface IJobLeaseProvider
 {
-    Task<bool> TryAcquireLeaseAsync(string jobId, string agentId, int durationSeconds);
-    Task ReleaseLeaseAsync(string jobId, string agentId);
+    /// <summary>
+    /// Mathematically dequeues the highest priority available task natively locking it for the provided duration.
+    /// Returns null gracefully if 0 queues are unlocked.
+    /// </summary>
+    Task<JobLeaseRecord?> FetchNextJobAsync(string agentId, int durationSeconds);
+    
+    Task ReleaseLeaseAsync(long jobId, string agentId);
 }

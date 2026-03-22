@@ -31,4 +31,7 @@ public class SentinelConfig
 
     [JsonPropertyName("arbitrator_url")]
     public string? ArbitratorUrl { get; set; } = null;
+
+    [JsonPropertyName("edge_token")]
+    public string EdgeToken { get; set; } = "Sentinel_Fallback_Token";
 }

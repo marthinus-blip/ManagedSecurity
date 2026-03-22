@@ -225,7 +225,7 @@ class Program
                 RouteOpCodeRaw = frame.OpCode,
                 IsSystemCommand = frame.IsSystemFrame,
                 SessionCorrelationId = frame.CorrelationId,
-                ExpectedPayloadLength = frame.PayloadLength,
+                ExpectedPayloadLength = frame.WirePayloadLength,
                 ActualParsedPayloadLength = frame.Payload.Length,
                 PayloadBase64 = Convert.ToBase64String(frame.Payload)
             };
@@ -766,7 +766,7 @@ class Program
 
         if (!string.IsNullOrEmpty(sentinelConfig.ArbitratorUrl))
         {
-            var connector = new ManagedSecurity.Orchestration.Arbitrator.ArbitratorConnectorBehavior(agent.Id, sentinelConfig.ArbitratorUrl);
+            var connector = new ManagedSecurity.Orchestration.Arbitrator.ArbitratorConnectorBehavior(agent.Id, sentinelConfig.ArbitratorUrl, sentinelConfig.EdgeToken);
             await agent.AddBehaviorAsync(connector);
         }
 

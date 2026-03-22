@@ -19,11 +19,13 @@ public static class SentinelDbBootstrapper
         command.CommandText = $@"
             CREATE TABLE IF NOT EXISTS {UserRecord.SchemaNameQl}_{UserRecord.TableNameQl} (
                 UserId INTEGER PRIMARY KEY AUTOINCREMENT,
-                GlobalIdentity TEXT NOT NULL UNIQUE,
-                Argon2IdHash TEXT NOT NULL,
+                EmailAddress TEXT NOT NULL UNIQUE,
+                PasswordHash TEXT NOT NULL,
+                SecurityStamp TEXT NOT NULL,
                 IsDeleted INTEGER NOT NULL DEFAULT 0,
                 CreatedAtEpoch INTEGER NOT NULL,
-                UpdatedAtEpoch INTEGER NOT NULL
+                UpdatedAtEpoch INTEGER NOT NULL,
+                UpdatedByUserId INTEGER NOT NULL
             );
 
             CREATE TABLE IF NOT EXISTS {TenantRecord.SchemaNameQl}_{TenantRecord.TableNameQl} (
@@ -39,6 +41,7 @@ public static class SentinelDbBootstrapper
                 TenantId INTEGER NOT NULL,
                 UserId INTEGER NOT NULL,
                 RoleLevel INTEGER NOT NULL,
+                CapabilitiesJson TEXT NOT NULL DEFAULT '[]',
                 GrantedAtEpoch INTEGER NOT NULL,
                 PRIMARY KEY (TenantId, UserId)
             );

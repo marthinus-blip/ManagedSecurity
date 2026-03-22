@@ -48,13 +48,16 @@ public class ArbitratorConnectorBehavior : IAgentBehavior
                 await client.ConnectAsync(uri, ct);
                 ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[CONNECTOR] Token-Handshake completed. Tunnel established natively: {uri}");
 
-                var buffer = new byte[1024];
+                var buffer = new byte[8192];
                 while (client.State == WebSocketState.Open && !ct.IsCancellationRequested)
                 {
                     var result = await client.ReceiveAsync(new ArraySegment<byte>(buffer), ct);
                     if (result.MessageType == WebSocketMessageType.Close) break;
                     
-                    // Future: Route P2P Signaling parameters to orchestrate WebRTC Handshake
+                    if (result.MessageType == WebSocketMessageType.Binary && result.Count >= ManagedSecurity.Protocol.ArbitratorFrame.HeaderSize)
+                    {
+                        ProcessIncomingBinaryBuffer(buffer, result.Count);
+                    }
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -63,6 +66,23 @@ public class ArbitratorConnectorBehavior : IAgentBehavior
             }
             
             await Task.Delay(5000, ct);
+        }
+    }
+
+    // Resolves CS4012 ref struct MSIL async state machine boundaries objectively mapping explicitly optimally seamlessly securely stably reliably
+    private void ProcessIncomingBinaryBuffer(byte[] buffer, int byteCount)
+    {
+        var segment = new ReadOnlySpan<byte>(buffer, 0, byteCount);
+        if (ManagedSecurity.Protocol.ArbitratorFrame.TryParse(segment, out var frame))
+        {
+            if (frame.OpCode == (ushort)ManagedSecurity.Protocol.SystemOpCode.P2PSignal)
+            {
+                var p2pRequest = MemoryPack.MemoryPackSerializer.Deserialize<ManagedSecurity.Protocol.P2PSignalPayload>(frame.Payload);
+                if (p2pRequest != null)
+                {
+                    ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[REVERSE_ROUTING] Intercepted Reverse Signal natively mapped to Viewer {p2pRequest.TargetViewerId}");
+                }
+            }
         }
     }
 

@@ -16,7 +16,9 @@ namespace ManagedSecurity.Orchestration.Engine;
 public class InquisitorBehavior : IAgentBehavior
 {
     public static event Action<ManagedSecurity.Common.Models.InferenceTelemetryEvent>? OnTelemetryEmitted;
+    public static event Action<ManagedSecurity.Discovery.DiscoveryResult, ManagedSecurity.Discovery.MachineVisionRoute>? OnRouteEscalated;
     public string Name => "Inquisitor";
+    private static readonly Microsoft.Extensions.Logging.ILogger _logger = ManagedSecurity.Common.Logging.SentinelLogger.CreateLogger<InquisitorBehavior>();
     private readonly string _agentId;
     private readonly OrchestrationConfig _config;
     private readonly Cipher _cipher;
@@ -38,7 +40,7 @@ public class InquisitorBehavior : IAgentBehavior
     public Task StartAsync(CancellationToken ct)
     {
         _isRunning = true;
-        Console.WriteLine($"[INQUISITOR] {_agentId} started and standing by for Narrow Phase escalations.");
+        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[INQUISITOR] {_agentId} started and standing by for Narrow Phase escalations.");
         return Task.CompletedTask;
     }
 
@@ -55,7 +57,7 @@ public class InquisitorBehavior : IAgentBehavior
     {
         if (_activeTargets.TryAdd(target.Url, target))
         {
-            Console.WriteLine($"[INQUISITOR] Locking onto target {target.IpAddress} for deep inference.");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[INQUISITOR] Locking onto target {target.IpAddress} for deep inference.");
             _ = RunInferenceLoopAsync(target);
         }
     }
@@ -64,7 +66,7 @@ public class InquisitorBehavior : IAgentBehavior
     {
         if (_activeTargets.TryRemove(cameraUrl, out _))
         {
-            Console.WriteLine($"[INQUISITOR] Target {cameraUrl} released. Returning to standby.");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[INQUISITOR] Target {cameraUrl} released. Returning to standby.");
         }
     }
 
@@ -72,49 +74,70 @@ public class InquisitorBehavior : IAgentBehavior
     {
         try
         {
-            // [thought_narrow_phase_yolo]((2026-03-15T10:13:28) (Why: Narrow Phase requires full frame processing logic, decoupling network topology from CV logic))
-            Console.WriteLine($"[INQUISITOR-ENGINE] Starting YOLO26 hot path sequence for {target.IpAddress}...");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[INQUISITOR-ENGINE] Starting YOLO26 hot path sequence for {target.IpAddress}...");
             
-            // In a real environment, the target object contains the proper interface for DecryptedStreamFeedStrategy
-            // We use PollingSnapshotFeedStrategy here temporarily via the abstract IVisualTensor pipeline to demonstrate decoupling.
-            using IMachineVisionFeedStrategy feedStrategy = new PollingSnapshotFeedStrategy(target, TimeSpan.FromMilliseconds(33), _cipher);
-
             while (_isRunning && _activeTargets.ContainsKey(target.Url))
             {
-                using var frame = await feedStrategy.GetNextFrameAsync(CancellationToken.None);
-                if (frame == null || frame.Data.IsEmpty) continue;
-
-                Console.WriteLine($"[INQUISITOR-ENGINE] Received frame: {frame.Data.Length} bytes ({frame.Format}).");
-
-                // Pass the frame directly zero-copy to the YOLO engine
-                var hits = await _yoloEngine.DetectAsync(frame, CancellationToken.None);
-
-                var boxes = new ManagedSecurity.Common.Models.BoundingBox[hits.Length];
-                if (hits.Length > 0)
+                IMachineVisionFeedStrategy feedStrategy;
+                if (target.MvRoute == ManagedSecurity.Discovery.MachineVisionRoute.LightPlain || target.MvRoute == ManagedSecurity.Discovery.MachineVisionRoute.None)
                 {
-                    Console.WriteLine($"[INQUISITOR-ENGINE] YOLO DETECTED: {hits.Length} valid targets on {target.IpAddress} with max conf {hits[0].Confidence}");
-                    
-                    for (int i = 0; i < hits.Length; i++)
-                    {
-                        var h = hits[i];
-                        Console.WriteLine($"[INQUISITOR-DEBUG] Taget {i}: ClassId={h.ClassId}, Conf={h.Confidence:F2}, X={h.X:F3}, Y={h.Y:F3}, W={h.Width:F3}, H={h.Height:F3}");
-                        boxes[i] = new ManagedSecurity.Common.Models.BoundingBox { X = h.X, Y = h.Y, Width = h.Width, Height = h.Height, Confidence = h.Confidence, ClassId = h.ClassId, Label = "Person" };
-                    }
+                    feedStrategy = new PollingSnapshotFeedStrategy(target, TimeSpan.FromMilliseconds(33), _cipher);
+                }
+                else
+                {
+                    ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[INQUISITOR-ENGINE] Heavy Plain Machine Vision route active for {target.IpAddress}. Spinning up unified GStreamer/Sentinel decoder natively...");
+                    feedStrategy = new HeavyPlainFeedStrategy(target, _config, _cipher);
                 }
 
-                OnTelemetryEmitted?.Invoke(new ManagedSecurity.Common.Models.InferenceTelemetryEvent
+                try
                 {
-                    CameraId = target.Id,
-                    TimestampMs = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                    Detections = boxes,
-                    IsNative = _yoloEngine.IsNative,
-                    EngineVersion = _yoloEngine.EngineVersion
-                });
+                    using (feedStrategy)
+                    {
+                        while (_isRunning && _activeTargets.ContainsKey(target.Url))
+                        {
+                            using var frame = await feedStrategy.GetNextFrameAsync(CancellationToken.None);
+                            if (frame == null || frame.Data.IsEmpty) continue;
+
+                            ManagedSecurity.Common.Logging.SentinelLogger.Debug(_logger, $"[INQUISITOR-ENGINE] Received frame: {frame.Data.Length} bytes ({frame.Format}).");
+
+                            var hits = await _yoloEngine.DetectAsync(frame, CancellationToken.None);
+                            var boxes = new ManagedSecurity.Common.Models.BoundingBox[hits.Length];
+
+                            if (hits.Length > 0)
+                            {
+                                ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[INQUISITOR-ENGINE] YOLO DETECTED: {hits.Length} valid targets on {target.IpAddress} with max conf {hits[0].Confidence:F2}");
+                                
+                                for (int i = 0; i < hits.Length; i++)
+                                {
+                                    var h = hits[i];
+                                    ManagedSecurity.Common.Logging.SentinelLogger.Debug(_logger, $"Taget {i}: ClassId={h.ClassId}, Conf={h.Confidence:F2}, X={h.X:F3}, Y={h.Y:F3}, W={h.Width:F3}, H={h.Height:F3}");
+                                    boxes[i] = new ManagedSecurity.Common.Models.BoundingBox { X = h.X, Y = h.Y, Width = h.Width, Height = h.Height, Confidence = h.Confidence, ClassId = h.ClassId, Label = "Person" };
+                                }
+                            }
+
+                            OnTelemetryEmitted?.Invoke(new ManagedSecurity.Common.Models.InferenceTelemetryEvent
+                            {
+                                CameraId = target.Id,
+                                TimestampMs = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                                Detections = boxes,
+                                IsNative = _yoloEngine.IsNative,
+                                EngineVersion = _yoloEngine.EngineVersion
+                            });
+                        }
+                    }
+                }
+                catch (NotSupportedException ex)
+                {
+                    ManagedSecurity.Common.Logging.SentinelLogger.Warning(_logger, $"[INQUISITOR-ENGINE] Zero-Trust Route Escalation Triggered ({target.IpAddress}): {ex.Message}");
+                    target.MvRoute = ManagedSecurity.Discovery.MachineVisionRoute.HeavyPlain;
+                    OnRouteEscalated?.Invoke(target, target.MvRoute);
+                    continue;
+                }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[INQUISITOR-ENGINE] Inference fault on {target.IpAddress}: {ex.Message}");
+            ManagedSecurity.Common.Logging.SentinelLogger.ErrorPlain(_logger, $"[INQUISITOR-ENGINE] Inference fault on {target.IpAddress}: {ex.Message}");
             ReleaseTarget(target.Url);
         }
     }

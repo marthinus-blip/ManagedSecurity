@@ -44,11 +44,12 @@ public class DiscoveryResult
         return BitConverter.ToString(hash).Replace("-", "").Substring(0, 12).ToLower();
     }
     
+    private string? _urlOverride;
     [System.Text.Json.Serialization.JsonPropertyName("url")]
     public string Url 
     { 
-        get => $"rtsp://{IpAddress}:{Port}{Path ?? "/"}";
-        set { /* Required for some serializers, but we mostly use getter */ }
+        get => _urlOverride ?? $"rtsp://{IpAddress}:{Port}{Path ?? "/"}";
+        set => _urlOverride = value;
     }
 
     private string? _snapshotUrl;

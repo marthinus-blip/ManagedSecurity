@@ -773,6 +773,10 @@ class Program
         if (inquisitor != null)
         {
             await agent.AddBehaviorAsync(inquisitor);
+            ManagedSecurity.Orchestration.Engine.InquisitorBehavior.OnRouteEscalated += (target, newRoute) =>
+            {
+                commander?.UpdateCameraRouting(target.Id, newRoute);
+            };
         }
 
         if (commander != null)
@@ -1546,30 +1550,78 @@ class Program
 
     public static async Task<int> DoOnvifDiag(string[] args)
     {
-        Console.WriteLine("[DIAGNOSTIC] Probing physical network dynamically for live nodes natively...");
-        string diagnosticSubnet = args.Length > 1 ? args[1] : "192.168.1";
-        var scanner = new ManagedSecurity.Discovery.RtspScanner();
-        var results = await scanner.ScanSubnetAsync(diagnosticSubnet);
+        using var factory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => { builder.AddConsole(); builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace); });
+        ManagedSecurity.Common.Logging.SentinelLogger.Initialize(factory);
 
-        var targetCam = results.FirstOrDefault();
-        if (targetCam == null)
+        Console.WriteLine("[DIAGNOSTIC] Probing physical network dynamically for zero-trust fallback node natively...");
+        string diagnosticSubnet = args.Length > 1 ? args[1] : "192.168.8";
+        
+        ManagedSecurity.Discovery.DiscoveryResult targetCam;
+        
+        if (args.Length > 1 && args[1] == "positive")
         {
-            Console.WriteLine("[DIAGNOSTIC] No physical cameras detected implicitly on 192.168.8 subnet.");
-            return 1;
+            Console.WriteLine("[DIAGNOSTIC] Overriding natively to local POSITIVE boundary stream entirely without docker.");
+            targetCam = new ManagedSecurity.Discovery.DiscoveryResult("127.0.0.1", 8555, "/positive") { RequiresAuth = false };
+            targetCam.Url = "file:///home/me/Repos/Dotnet/ManagedSecurity/pedestrian.avi";
+            targetCam.MvRoute = ManagedSecurity.Discovery.MachineVisionRoute.HeavyPlain;
         }
-
-        Console.WriteLine($"[DIAGNOSTIC] Discovered physical target: {targetCam.IpAddress} (Port: {targetCam.Port})");
+        else if (args.Length > 1 && args[1] == "negative")
+        {
+            Console.WriteLine("[DIAGNOSTIC] Overriding natively to docker-hosted NEGATIVE boundary stream.");
+            targetCam = new ManagedSecurity.Discovery.DiscoveryResult("127.0.0.1", 8555, "/negative") { RequiresAuth = true };
+        }
+        else
+        {
+            var scanner = new ManagedSecurity.Discovery.RtspScanner(2000);
+            // Scan only the .23 host if generic 192.168.8 is used to prevent CI timeout blocks natively
+            int startIp = diagnosticSubnet == "192.168.8" ? 23 : 1;
+            int endIp = diagnosticSubnet == "192.168.8" ? 24 : 254;
+            
+            Console.WriteLine($"[DIAGNOSTIC] Executing dynamic Host Discovery on {diagnosticSubnet}.x ({startIp}-{endIp}) ...");
+            var cameras = await scanner.ScanSubnetAsync(diagnosticSubnet, startIp, endIp);
+            
+            if (cameras.Count > 0)
+            {
+                targetCam = cameras[0];
+                targetCam.DisplayName = $"AutoCam_{targetCam.Id}";
+                targetCam.MvRoute = ManagedSecurity.Discovery.MachineVisionRoute.LightPlain; // Assume polling by default for physical edge nodes
+                
+                Console.WriteLine($"[DIAGNOSTIC] Auto-Detected: {targetCam.DisplayName} at {targetCam.Url}");
+                
+                // Formally append configuration organically structurally
+                try
+                {
+                    string confPath = "managed_cameras.json";
+                    var existing = System.IO.File.Exists(confPath) ? System.Text.Json.JsonSerializer.Deserialize<List<ManagedSecurity.Discovery.DiscoveryResult>>(System.IO.File.ReadAllText(confPath)) ?? new() : new();
+                    if (!existing.Any(c => c.Id == targetCam.Id))
+                    {
+                        existing.Add(targetCam);
+                        System.IO.File.WriteAllText(confPath, System.Text.Json.JsonSerializer.Serialize(existing, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+                        Console.WriteLine($"[DIAGNOSTIC] Configuration updated: '{confPath}' appended securely.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[DIAGNOSTIC] Configuration write fault: {ex.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[DIAGNOSTIC] Network probe exhausted. 0 nodes detected on {diagnosticSubnet}.x");
+                return 1;
+            }
+        }
         
         // Dynamically append authentication cleanly to structural payload if needed for older nodes
         if (targetCam.RequiresAuth)
         {
-            Console.WriteLine($"[DIAGNOSTIC] Camera requires auth; formatting direct URL natively...");
+            Console.WriteLine($"[DIAGNOSTIC] Camera RequiresAuth; ensure environment overrides are injected normally.");
         }
-        // Enforce physical Absolute URI bounds natively using the actual ONVIF-discovered physical parameter
         string fallbackUri = $"http://{targetCam.IpAddress}/?action=snapshot";
         targetCam.SnapshotUrl = targetCam.RequiresAuth ? $"http://admin:admin@{targetCam.IpAddress}/?action=snapshot" : fallbackUri;
 
         var config = new OrchestrationConfig(); 
+        config.AllowSimulationFallback = false; // Strictly mathematically enforce the new Native C++ binding
         var cipher = new Cipher(new SimpleKeyProvider(new byte[32]));
         var inquisitor = new ManagedSecurity.Orchestration.Engine.InquisitorBehavior("TEST_AGENT", config, cipher);
         await inquisitor.StartAsync(CancellationToken.None);
@@ -1595,137 +1647,9 @@ class Program
         return 0;
     }
 
-    static async Task StartBackgroundRecordersAsync(CommanderBehavior commander, SentinelConfig config, Cipher cipher, CancellationToken ct)
-    {
-        Console.WriteLine("[RECORDER] Continuous background recording active.");
-        var activeRecorders = new ConcurrentDictionary<string, CancellationTokenSource>();
 
-        while (!ct.IsCancellationRequested)
-        {
-            var cameras = commander.GetCameras().Where(c => c.IsConfigured).ToList();
-            foreach (var cam in cameras)
-            {
-                if (!activeRecorders.ContainsKey(cam.Id))
-                {
-                    var recorderCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    if (activeRecorders.TryAdd(cam.Id, recorderCts))
-                    {
-                        _ = Task.Run(async () =>
-                        {
-                            try {
-                                await RecordCameraLoopAsync(cam, config, cipher, recorderCts.Token);
-                            }
-                            catch (Exception ex) {
-                                Console.WriteLine($"[RECORDER] Fatal error for {cam.DisplayName}: {ex.Message}");
-                            }
-                            finally {
-                                activeRecorders.TryRemove(cam.Id, out _);
-                            }
-                        }, ct);
-                    }
-                }
-            }
-            await Task.Delay(TimeSpan.FromSeconds(30), ct);
-        }
-    }
-
-    static async Task RecordCameraLoopAsync(DiscoveryResult camera, SentinelConfig config, Cipher cipher, CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            try 
-            {
-                string vaultDir = Path.IsPathRooted(config.VaultLocation) ? config.VaultLocation : Path.GetFullPath(Paths.GetRuntimePath(config.VaultLocation));
-                if (!Directory.Exists(vaultDir)) Directory.CreateDirectory(vaultDir);
-
-                long currentSize = VaultIndexer.GetTotalVaultSize(vaultDir);
-                if (currentSize >= (long)(config.StorageQuotaGb * 1024 * 1024 * 1024))
-                {
-                    if (ct.IsCancellationRequested) break;
-                    await Task.Delay(TimeSpan.FromMinutes(1), ct);
-                    continue;
-                }
-
-                string safeName = camera.DisplayName?.Replace(" ", "_").Replace("/", "_").Replace("\\", "_") ?? "UNKNOWN";
-                string fileName = $"Sentinel_{safeName}_{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss}.msg";
-                string fullPath = Path.Combine(vaultDir, fileName);
-                string meta = $"CameraID={camera.Id};DisplayName={camera.DisplayName};StartTime={DateTimeOffset.UtcNow:O}";
-                
-                Console.WriteLine($"[RECORDER] Starting segment: {fileName}");
-
-                using var fs = File.Create(fullPath);
-                using var vaultStream = new ManagedSecurityStream(fs, cipher, ManagedSecurityStreamMode.Encrypt, metadata: Encoding.UTF8.GetBytes(meta));
-
-                string teleFileName = fileName.Replace(".msg", ".telemetry.jsonl");
-                string telePath = Path.Combine(vaultDir, teleFileName);
-                using var teleFs = new FileStream(telePath, FileMode.Create, FileAccess.Write, FileShare.Read);
-                using var teleWriter = new StreamWriter(teleFs, Encoding.UTF8, 1024, leaveOpen: true);
-                
-                void RecordTelemetry(ManagedSecurity.Common.Models.InferenceTelemetryEvent e) 
-                {
-                    if (e.CameraId == camera.Id) 
-                    {
-                        try {
-                            var json = System.Text.Json.JsonSerializer.Serialize(e, SentinelJsonContext.Default.InferenceTelemetryEvent);
-                            lock(teleWriter) {
-                                teleWriter.WriteLine(json);
-                                teleWriter.Flush();
-                            }
-                        } catch { }
-                    }
-                }
-                
-                ManagedSecurity.Orchestration.Engine.InquisitorBehavior.OnTelemetryEmitted += RecordTelemetry;
-
-                string pipeline;
-                if (camera.Url.ToLower().Contains("test") || camera.Url == "test")
-                {
-                    pipeline = "-q videotestsrc is-live=true pattern=ball ! video/x-raw,width=800,height=600,framerate=25/1 ! clockoverlay ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=ultrafast bframes=0 ! video/x-h264 ! mp4mux streamable=true fragment-duration=100 ! fdsink fd=1";
-                }
-                else 
-                {
-                    pipeline = $"-q uridecodebin uri=\"{camera.Url}\" ! videoconvert ! videoscale ! video/x-raw,width=800,height=600 ! x264enc tune=zerolatency bitrate=1200 speed-preset=ultrafast ! video/x-h264 ! mp4mux streamable=true fragment-duration=200 ! fdsink fd=1";
-                }
-
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "gst-launch-1.0",
-                    Arguments = pipeline,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using var process = Process.Start(psi);
-                if (process == null) break;
-
-                _ = Task.Run(async () => {
-                    var err = await process.StandardError.ReadToEndAsync();
-                    if (!string.IsNullOrEmpty(err) && (config.LogLevel == LogLevel.Debug || config.LogLevel == LogLevel.Trace)) {
-                        Console.WriteLine($"[RECORDER-GST-DIAG] {err}");
-                    }
-                });
-
-                // Close segment after 5 minutes or on cancellation
-                var segmentTimer = Task.Delay(TimeSpan.FromMinutes(5), ct);
-                var copyTask = process.StandardOutput.BaseStream.CopyToAsync(vaultStream, ct);
-
-                await Task.WhenAny(segmentTimer, copyTask);
-                
-                ManagedSecurity.Orchestration.Engine.InquisitorBehavior.OnTelemetryEmitted -= RecordTelemetry;
-                
-                try { process.Kill(); } catch { }
-                Console.WriteLine($"[RECORDER] Segment complete: {fileName}");
-            }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
-            {
-                Console.WriteLine($"[RECORDER] Error recording {camera.DisplayName}: {ex.Message}");
-                await Task.Delay(TimeSpan.FromSeconds(10), ct);
-            }
-        }
-    }
 }
+
 
 public record StorageStats(long UsedBytes, long QuotaBytes, int TotalFiles);
 

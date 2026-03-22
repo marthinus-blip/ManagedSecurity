@@ -12,6 +12,7 @@ namespace ManagedSecurity.Orchestration;
 [ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class GuardianBehavior : IAgentBehavior
 {
+    private static readonly Microsoft.Extensions.Logging.ILogger _logger = ManagedSecurity.Common.Logging.SentinelLogger.CreateLogger<GuardianBehavior>();
     public string Name => "Guardian";
     private readonly string _agentId;
     private readonly OrchestrationConfig _config;
@@ -50,7 +51,7 @@ public class GuardianBehavior : IAgentBehavior
     public Task StartAsync(CancellationToken ct)
     {
         _isRunning = true;
-        Console.WriteLine($"[GUARDIAN] Scout {_agentId} started. Frequency: {_config.BroadPhaseInterval.TotalSeconds}s");
+        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[GUARDIAN] Scout {_agentId} started. Frequency: {_config.BroadPhaseInterval.TotalSeconds}s");
 
         // Start Heartbeat loop
         _ = HeartbeatLoop(ct);
@@ -85,7 +86,7 @@ public class GuardianBehavior : IAgentBehavior
 
         if (_activeTasks.TryAdd(assignment.CameraUrl, camera))
         {
-            Console.WriteLine($"[GUARDIAN] Monitoring started: {assignment.Id} ({assignment.IpAddress}) via {assignment.MvRoute}");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[GUARDIAN] Monitoring started: {assignment.Id} ({assignment.IpAddress}) via {assignment.MvRoute}");
             
             // Map the appropriate feed strategy dynamically
             IMachineVisionFeedStrategy feedStrategy;
@@ -141,11 +142,11 @@ public class GuardianBehavior : IAgentBehavior
                     {
                         var path = $"/tmp/guardian_first_frame_{camera.Id}.jpg";
                         await System.IO.File.WriteAllBytesAsync(path, currentFrame, ct);
-                        Console.WriteLine($"[GUARDIAN] GROUND TRUTH VERIFICATION: Saved {currentFrame.Length} bytes to {path}");
+                        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[GUARDIAN] GROUND TRUTH VERIFICATION: Saved {currentFrame.Length} bytes to {path}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[GUARDIAN] Failed to save verification frame: {ex.Message}");
+                        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[GUARDIAN] Failed to save verification frame: {ex.Message}");
                     }
                 }
 
@@ -157,7 +158,7 @@ public class GuardianBehavior : IAgentBehavior
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[GUARDIAN] Decryption failed for {camera.IpAddress}: {ex.Message}");
+                        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[GUARDIAN] Decryption failed for {camera.IpAddress}: {ex.Message}");
                         continue;
                     }
                 }
@@ -179,7 +180,7 @@ public class GuardianBehavior : IAgentBehavior
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            Console.WriteLine($"[GUARDIAN] Feed loop crashed for {camera.IpAddress}: {ex.Message}");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[GUARDIAN] Feed loop crashed for {camera.IpAddress}: {ex.Message}");
         }
         finally 
         {

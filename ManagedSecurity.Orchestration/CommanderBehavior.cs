@@ -26,6 +26,7 @@ public record GuardianActivityAlert(string AgentId, string CameraUrl, DateTime T
 [ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class CommanderBehavior : IAgentBehavior
 {
+    private static readonly Microsoft.Extensions.Logging.ILogger _logger = ManagedSecurity.Common.Logging.SentinelLogger.CreateLogger<CommanderBehavior>();
     public string Name => "Commander";
     private readonly OrchestrationConfig _config;
     public record ActiveAgent(string AgentId, DateTime LastSeen, float CpuLoad, int TaskCount, float MemoryLoad, string Platform, bool IsNativeMvAttached, string EngineVersion);
@@ -59,7 +60,7 @@ public class CommanderBehavior : IAgentBehavior
             {
                 _unassignedCameras.TryAdd(cam.Url, cam);
             }
-            Console.WriteLine($"[COMMANDER] Loaded {cameras.Count} cameras from store.");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Loaded {cameras.Count} cameras from store.");
         }
     }
 
@@ -68,14 +69,14 @@ public class CommanderBehavior : IAgentBehavior
         // Use URL as unique key for now
         if (_unassignedCameras.TryAdd(camera.Url, camera))
         {
-            Console.WriteLine($"[COMMANDER] Camera pooled: {camera.IpAddress}");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Camera pooled: {camera.IpAddress}");
             _ = SaveStoreAsync();
         }
     }
 
     public void ConfigureCamera(string urlOrId, string displayName)
     {
-        Console.WriteLine($"[COMMANDER] Attempting to configure: '{urlOrId}' as '{displayName}'");
+        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Attempting to configure: '{urlOrId}' as '{displayName}'");
         
         string? targetUrl = null;
         if (_unassignedCameras.ContainsKey(urlOrId))
@@ -97,13 +98,25 @@ public class CommanderBehavior : IAgentBehavior
             var cam = _unassignedCameras[targetUrl];
             cam.DisplayName = displayName;
             cam.IsConfigured = true;
-            Console.WriteLine($"[COMMANDER] Configured {targetUrl} as '{displayName}'");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Configured {targetUrl} as '{displayName}'");
             _ = SaveStoreAsync();
         }
         else 
         {
-            Console.WriteLine($"[COMMANDER] Warning: Failed to find camera for configuration. Input was: '{urlOrId}'");
-            Console.WriteLine($"[COMMANDER] Available keys: {string.Join(", ", _unassignedCameras.Keys)}");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Warning: Failed to find camera for configuration. Input was: '{urlOrId}'");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Available keys: {string.Join(", ", _unassignedCameras.Keys)}");
+        }
+    }
+
+    public void UpdateCameraRouting(string id, MachineVisionRoute newRoute)
+    {
+        var camera = _unassignedCameras.Values.FirstOrDefault(c => c.Id == id);
+        if (camera != null && camera.MvRoute != newRoute)
+        {
+            camera.MvRoute = newRoute;
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Camera {camera.IpAddress} permanent route escalated seamlessly to {newRoute}. [ESC-OPT]");
+            // Save state immediately to ensure the Sentinel doesn't repeatedly fail across reboots.
+            _ = SaveStoreAsync();
         }
     }
 
@@ -117,7 +130,7 @@ public class CommanderBehavior : IAgentBehavior
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[COMMANDER] CRITICAL: Failed to save camera store: {ex.Message}");
+                ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] CRITICAL: Failed to save camera store: {ex.Message}");
             }
         }
     }
@@ -125,7 +138,7 @@ public class CommanderBehavior : IAgentBehavior
     public void EnableAutoDiscovery(string subnet)
     {
         _discoverySubnet = subnet;
-        Console.WriteLine($"[COMMANDER] Auto-Discovery enabled for {subnet}.0/24");
+        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Auto-Discovery enabled for {subnet}.0/24");
     }
 
     private async Task PerformDiscoveryScanAsync()
@@ -134,7 +147,7 @@ public class CommanderBehavior : IAgentBehavior
         if (DateTime.UtcNow - _lastScanTime < _scanInterval) return;
 
         _lastScanTime = DateTime.UtcNow;
-        Console.WriteLine($"[COMMANDER] Background scan started on {_discoverySubnet}.0/24...");
+        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Background scan started on {_discoverySubnet}.0/24...");
         
         try 
         {
@@ -158,7 +171,7 @@ public class CommanderBehavior : IAgentBehavior
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[COMMANDER] Discovery scan failed: {ex.Message}");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Discovery scan failed: {ex.Message}");
         }
     }
 
@@ -173,7 +186,7 @@ public class CommanderBehavior : IAgentBehavior
     public async Task StartAsync(CancellationToken ct)
     {
         _isRunning = true;
-        Console.WriteLine($"[COMMANDER] General initialized. Governance interval: {_config.GovernanceInterval.TotalSeconds}s");
+        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] General initialized. Governance interval: {_config.GovernanceInterval.TotalSeconds}s");
         
         while (!ct.IsCancellationRequested && _isRunning)
         {
@@ -230,7 +243,7 @@ public class CommanderBehavior : IAgentBehavior
 
     public void ReceiveAlert(GuardianActivityAlert alert)
     {
-        Console.WriteLine($"[COMMANDER] ALERT from Scout {alert.AgentId}: Interest level {alert.Intensity:P1} on {alert.CameraUrl}");
+        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] ALERT from Scout {alert.AgentId}: Interest level {alert.Intensity:P1} on {alert.CameraUrl}");
         OnActivityDetected?.Invoke(alert);
     }
 
@@ -246,13 +259,13 @@ public class CommanderBehavior : IAgentBehavior
         {
             if (_activeWorkers.TryRemove(id, out _))
             {
-                Console.WriteLine($"[COMMANDER] Scout {id} is MIA. Salvaging eyes...");
+                ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Scout {id} is MIA. Salvaging eyes...");
                 // Re-pool tasks from this worker
                 if (_workerTasks.TryRemove(id, out var tasks))
                 {
                     foreach (var t in tasks) 
                     {
-                        Console.WriteLine($"[COMMANDER] Tasks {t.CameraUrl} back in pool.");
+                        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Tasks {t.CameraUrl} back in pool.");
                         // In reality we'd need to reconstruct the DiscoveryResult
                     }
                 }
@@ -279,7 +292,7 @@ public class CommanderBehavior : IAgentBehavior
                 new List<TaskLease> { lease }, 
                 (_, list) => { list.Add(lease); return list; });
 
-            Console.WriteLine($"[COMMANDER] Assigned {camera.IpAddress} to Scout {targetWorker}");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[COMMANDER] Assigned {camera.IpAddress} to Scout {targetWorker}");
             OnTaskAssigned?.Invoke(targetWorker, assignment);
         }
     }

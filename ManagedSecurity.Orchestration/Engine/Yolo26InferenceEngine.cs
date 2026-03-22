@@ -15,46 +15,58 @@ namespace ManagedSecurity.Orchestration.Engine;
 public sealed partial class Yolo26InferenceEngine : IYoloInferenceEngine
 {
     private readonly OrchestrationConfig _config;
-    private bool _hasNativeLibrary;
-    public const string NativeLibraryName = "sentinel_yolo26_core";
+    private static readonly bool _hasNativeLibrary;
+    private static readonly string _engineVersionStr;
     
+    public const string NativeLibraryName = "sentinel_yolo26_core";
     public bool IsNative => _hasNativeLibrary;
     public string EngineVersion { get; private set; } = "Telemetry Simulation Mode";
 
-    public Yolo26InferenceEngine(OrchestrationConfig config)
+    static Yolo26InferenceEngine()
     {
-        _config = config;
-        
-        // [thought_yolo26_init]((2026-03-15T10:13:28) (Why: Initialize neural weights on start to eliminate hotpath spikes))
-        // We elegantly probe for the native library to prevent throwing exceptions on the inference hotpath.
-        
-        // Explicitly pre-load libonnxruntime before loading sentinel_yolo26_core to ensure the Linux dynamic linker 
-        // finds the DT_NEEDED dependency without requiring LD_LIBRARY_PATH modifications in the terminal.
         var basePath = AppContext.BaseDirectory;
         string onnxPath = System.IO.Path.Combine(basePath, "libonnxruntime.so.1.17.1");
         string corePath = System.IO.Path.Combine(basePath, "sentinel_yolo26_core.so");
         
         NativeLibrary.TryLoad(onnxPath, out var _);
         
-        if (NativeLibrary.TryLoad(corePath, out var _) || 
-            NativeLibrary.TryLoad(NativeLibraryName, typeof(Yolo26InferenceEngine).Assembly, DllImportSearchPath.UseDllDirectoryForDependencies | DllImportSearchPath.SafeDirectories, out _))
+        if (NativeLibrary.TryLoad(corePath, out IntPtr handle) || 
+            NativeLibrary.TryLoad(NativeLibraryName, typeof(Yolo26InferenceEngine).Assembly, DllImportSearchPath.UseDllDirectoryForDependencies | DllImportSearchPath.SafeDirectories, out handle))
         {
+            NativeLibrary.SetDllImportResolver(typeof(Yolo26InferenceEngine).Assembly, (name, assembly, searchPath) =>
+            {
+                if (name == NativeLibraryName && handle != IntPtr.Zero) return handle;
+                return IntPtr.Zero;
+            });
+
             try 
             {
-                EngineVersion = Marshal.PtrToStringAnsi(Yolo26_GetEngineInfo()) ?? "Unknown Native Engine";
+                _engineVersionStr = Marshal.PtrToStringAnsi(Yolo26_GetEngineInfo()) ?? "Unknown Native Engine";
                 _hasNativeLibrary = true;
-                SentinelLogger.Heartbeat(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", $"Initialized weights (GPL-3.0 Native Mode Attached - {EngineVersion})");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _hasNativeLibrary = false;
-                SentinelLogger.NoSignal(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", $"Native library found but entry point failed ({ex.Message}). Falling back to Simulation.");
+                _engineVersionStr = "Telemetry Simulation Mode";
             }
         }
         else
         {
-            _hasNativeLibrary = false;
-            SentinelLogger.NoSignal(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", $"{NativeLibraryName} not found! Edge deployment falling back to Telemetry Simulation Mode.");
+            _engineVersionStr = "Telemetry Simulation Mode";
+        }
+    }
+
+    public Yolo26InferenceEngine(OrchestrationConfig config)
+    {
+        _config = config;
+        EngineVersion = _engineVersionStr;
+
+        if (_hasNativeLibrary)
+        {
+            SentinelLogger.Heartbeat(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", $"Initialized weights (GPL-3.0 Native Mode Attached - {EngineVersion})");
+        }
+        else
+        {
+            SentinelLogger.NoSignal(SentinelLogger.CreateLogger<Yolo26InferenceEngine>(), "Yolo26InferenceEngine", $"{NativeLibraryName} not found or entry point failed! Edge deployment falling back to Telemetry Simulation Mode.");
         }
     }
 
@@ -96,8 +108,14 @@ public sealed partial class Yolo26InferenceEngine : IYoloInferenceEngine
         
         if (!_hasNativeLibrary)
         {
-            // [thought_fallback_simulation]((2026-03-15T11:00:00) (Simulating inference when the GPL library is absent so UI work can proceed))
-            return SimulateInference(threshold);
+            if (_config.AllowSimulationFallback)
+            {
+                // [thought_fallback_simulation]((2026-03-15T11:00:00) (Simulating inference when the GPL library is absent so UI work can proceed))
+                return SimulateInference(threshold);
+            }
+            
+            // [thought_ground_truth_enforcement]((2026-03-22T10:45:00) (Throwing explicitly rather than returning Array.Empty to prevent silent failure deception natively))
+            throw new InvalidOperationException("CRITICAL: Visual inference requested but YOLO library missing. Ground Truth constraints block simulated fallback data.");
         }
 
         int hits = 0;
@@ -115,7 +133,6 @@ public sealed partial class Yolo26InferenceEngine : IYoloInferenceEngine
         }
         catch (DllNotFoundException)
         {
-            _hasNativeLibrary = false;
             return SimulateInference(threshold);
         }
 

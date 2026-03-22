@@ -97,7 +97,20 @@ extern "C" {
             input_tensor_values.resize(model_tensor_size);
         }
 
-        if (length < model_tensor_size * sizeof(float)) {
+        if (length == model_channels * model_width * model_height) {
+            unsigned char* raw_data = (unsigned char*)tensorData;
+            for (int y = 0; y < model_height; ++y) {
+                for (int x = 0; x < model_width; ++x) {
+                    int pixel_idx = (y * model_width + x) * model_channels;
+                    // BGR -> CHW (R, G, B)
+                    input_tensor_values[0 * model_height * model_width + y * model_width + x] = raw_data[pixel_idx + 2] / 255.0f; // R
+                    input_tensor_values[1 * model_height * model_width + y * model_width + x] = raw_data[pixel_idx + 1] / 255.0f; // G
+                    input_tensor_values[2 * model_height * model_width + y * model_width + x] = raw_data[pixel_idx + 0] / 255.0f; // B
+                }
+            }
+            inferenceData = input_tensor_values.data();
+        }
+        else if (length < model_tensor_size * sizeof(float)) {
             int img_width, img_height, img_channels;
             unsigned char* img_data = stbi_load_from_memory(tensorData, length, &img_width, &img_height, &img_channels, model_channels);
             
@@ -176,18 +189,17 @@ extern "C" {
             int classId = 0;
             
             if (is_transposed) {
-                // YOLO End2End ONNX exports [x_min, y_min, x_max, y_max, confidence, classId]
-                float x_min = output_arr[0 * num_proposals + i];
-                float y_min = output_arr[1 * num_proposals + i];
-                float x_max = output_arr[2 * num_proposals + i];
-                float y_max = output_arr[3 * num_proposals + i];
+                // Standard YOLOv8 ONNX exports [cx, cy, w, h, class0...class79]
+                float cx = output_arr[0 * num_proposals + i];
+                float cy = output_arr[1 * num_proposals + i];
+                w = output_arr[2 * num_proposals + i];
+                h = output_arr[3 * num_proposals + i];
                 
-                // Convert to cx, cy, w, h for the UI
-                w = x_max - x_min;
-                h = y_max - y_min;
-                x = x_min + w / 2.0f;
-                y = y_min + h / 2.0f;
+                // The UI expects Top-Left Coordinates (x, y) dynamically
+                x = cx - w / 2.0f;
+                y = cy - h / 2.0f;
                 
+                // Scan for the highest class probability logically
                 for (int c = 4; c < num_elements; ++c) {
                     float class_prob = output_arr[c * num_proposals + i];
                     if (class_prob > conf) {
@@ -222,6 +234,23 @@ extern "C" {
                 hits++;
             }
         }
+        
+        float max_c = 0;
+        int max_i = 0;
+        for (int i = 0; i < num_proposals; ++i) {
+            float c = 0;
+            if (is_transposed) {
+                // Max across classes for current proposal
+                for (int c_idx = 4; c_idx < num_elements; ++c_idx) {
+                    float class_prob = output_arr[c_idx * num_proposals + i];
+                    if (class_prob > c) c = class_prob;
+                }
+            } else {
+                c = output_arr[i * num_elements + 4];
+            }
+            if (c > max_c) { max_c = c; max_i = i; }
+        }
+        std::cout << "[NATIVE CORE] Inference finished. Max Confidence found across " << num_proposals << " rows was " << max_c << std::endl;
         
         return hits;
     }

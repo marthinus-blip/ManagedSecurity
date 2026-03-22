@@ -13,6 +13,7 @@ namespace ManagedSecurity.Orchestration.Engine;
 [ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class PollingSnapshotFeedStrategy : IMachineVisionFeedStrategy, IDisposable
 {
+    private static readonly Microsoft.Extensions.Logging.ILogger _logger = ManagedSecurity.Common.Logging.SentinelLogger.CreateLogger<PollingSnapshotFeedStrategy>();
     private readonly HttpClient _http;
     private readonly DiscoveryResult _camera;
     private readonly TimeSpan _pollingInterval;
@@ -53,8 +54,21 @@ public class PollingSnapshotFeedStrategy : IMachineVisionFeedStrategy, IDisposab
             // Block asynchronously until the exact next timing window to enforce Guardian constraints
             if (await _timer.WaitForNextTickAsync(ct))
             {
-                // Retrieve lightweight JPEG payload directly from camera API
+                // Retrieve lightweight payload directly from camera API. We use GetByteArrayAsync 
+                // to universally bypass malformed HTTP/1.0 headers from legacy firmware like thttpd/2.25b.
                 var imageBytes = await _http.GetByteArrayAsync(_camera.SnapshotUrl, ct);
+
+                // Zero-Trust Route Escalation Check: Ensure we aren't illegally polling an HTML web viewer
+                if (imageBytes.Length > 4)
+                {
+                    // Structurally inspect magic headers for HTML presence instead of relying on broken headers.
+                    string magic = System.Text.Encoding.UTF8.GetString(imageBytes, 0, Math.Min(64, imageBytes.Length));
+                    if (magic.Contains("<!DOC", StringComparison.OrdinalIgnoreCase) || 
+                        magic.Contains("<html", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new NotSupportedException($"Device returned HTML structure natively. Expected raw JPEG magic bytes. Length: {imageBytes.Length}");
+                    }
+                }
                 
                 if (_cipher != null && imageBytes.Length > 0)
                 {
@@ -72,10 +86,20 @@ public class PollingSnapshotFeedStrategy : IMachineVisionFeedStrategy, IDisposab
         {
             // Normal termination
         }
+        catch (NotSupportedException ex)
+        {
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[POLLER:{_camera.Id}] Route incompatible: {ex.Message}");
+            throw; // Escalate route failure to Inquisitor inherently
+        }
+        catch (System.Net.Http.HttpRequestException ex)
+        {
+            ManagedSecurity.Common.Logging.SentinelLogger.Warning(_logger, $"[POLLER:{_camera.Id}] Firmware brutally aborted HTTP connection natively ({ex.Message}). Triggering Route Escalation...");
+            throw new NotSupportedException($"Camera HTTP stack is structurally incompatible with modern polling: {ex.Message}");
+        }
         catch (Exception ex)
         {
-            Console.WriteLine($"[POLLER:{_camera.Id}] Snapshot failed: {ex.Message}");
-            await Task.Delay(1000, ct); // Backoff briefly on error
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[POLLER:{_camera.Id}] Snapshot failed: {ex.Message} -> {ex.InnerException?.Message}");
+            await Task.Delay(1000, ct); // Backoff briefly on temporary HTTP error
         }
 
         return null; // Signals failure or shutdown

@@ -12,6 +12,7 @@ namespace ManagedSecurity.Orchestration.Arbitrator;
 [ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class ArbitratorConnectorBehavior : IAgentBehavior
 {
+    private static readonly Microsoft.Extensions.Logging.ILogger _logger = ManagedSecurity.Common.Logging.SentinelLogger.CreateLogger<ArbitratorConnectorBehavior>();
     public string Name => "ArbitratorConnector";
     
     private readonly string _agentId;
@@ -27,7 +28,7 @@ public class ArbitratorConnectorBehavior : IAgentBehavior
     public async Task StartAsync(CancellationToken ct)
     {
         _isRunning = true;
-        Console.WriteLine($"[CONNECTOR] Initiating persistent outbound tunnel. Target: {_arbitratorUrl}");
+        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[CONNECTOR] Initiating persistent outbound tunnel. Target: {_arbitratorUrl}");
         
         while (!ct.IsCancellationRequested && _isRunning)
         {
@@ -36,7 +37,7 @@ public class ArbitratorConnectorBehavior : IAgentBehavior
             {
                 var uri = new Uri($"{_arbitratorUrl}?agentId={_agentId}");
                 await client.ConnectAsync(uri, ct);
-                Console.WriteLine($"[CONNECTOR] Tunnel established: {uri}");
+                ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[CONNECTOR] Tunnel established: {uri}");
 
                 var buffer = new byte[1024];
                 while (client.State == WebSocketState.Open && !ct.IsCancellationRequested)
@@ -49,7 +50,7 @@ public class ArbitratorConnectorBehavior : IAgentBehavior
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                Console.WriteLine($"[CONNECTOR] Tunnel disconnected: {ex.Message}. Reconnecting in 5s.");
+                ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[CONNECTOR] Tunnel disconnected: {ex.Message}. Reconnecting in 5s.");
             }
             
             await Task.Delay(5000, ct);

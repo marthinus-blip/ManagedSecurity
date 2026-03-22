@@ -13,6 +13,7 @@ namespace ManagedSecurity.Orchestration;
 [ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class DomainBehavior : IAgentBehavior
 {
+    private static readonly Microsoft.Extensions.Logging.ILogger _logger = ManagedSecurity.Common.Logging.SentinelLogger.CreateLogger<DomainBehavior>();
     public string Name => "DomainDiscovery";
     private readonly string _agentId;
     private readonly string _version;
@@ -51,11 +52,11 @@ public class DomainBehavior : IAgentBehavior
             _ = Task.Run(() => ListenLoop(_cts.Token), _cts.Token);
             _ = Task.Run(() => AnnounceLoop(_cts.Token), _cts.Token);
             
-            Console.WriteLine($"[DOMAIN] Discovery active on port {_discoveryPort}");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[DOMAIN] Discovery active on port {_discoveryPort}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[DOMAIN] Failed to start discovery: {ex.Message}");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[DOMAIN] Failed to start discovery: {ex.Message}");
         }
 
         return Task.CompletedTask;
@@ -80,7 +81,7 @@ public class DomainBehavior : IAgentBehavior
                     {
                          if (_peers.TryAdd(peer.Id, info))
                          {
-                            Console.WriteLine($"[DOMAIN] New Peer Detected: {peer.Id} (v{peer.Version}) as {peer.Role}");
+                            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[DOMAIN] New Peer Detected: {peer.Id} (v{peer.Version}) as {peer.Role}");
                             CompareAndNotify(info);
                          }
                     }
@@ -122,13 +123,13 @@ public class DomainBehavior : IAgentBehavior
         if (cmp < 0)
         {
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"[DOMAIN] Higher version detected ({other.Id}: {other.Version}). We are a LESSER agent.");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[DOMAIN] Higher version detected ({other.Id}: {other.Version}). We are a LESSER agent.");
             Console.ResetColor();
         }
         else if (cmp > 0)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"[DOMAIN] Lower version detected ({other.Id}: {other.Version}). We are the LEADER.");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[DOMAIN] Lower version detected ({other.Id}: {other.Version}). We are the LEADER.");
             Console.ResetColor();
         }
     }

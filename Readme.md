@@ -233,6 +233,40 @@ dotnet test --filter "TestCategory!=Integration"
 dotnet test --filter "TestCategory=Integration"
 ```
 
+### Docker Integration Test Setup
+The Integration test suite mathematically verifies PostgreSQL Row-Level Security and Concurrent Database behaviors natively. To execute these tests, `Testcontainers.PostgreSql` requires explicit and direct access to your local Docker daemon. If you receive an error stating `Docker is either not running or misconfigured (Permission denied)`, you must explicitly configure your daemon permissions.
+
+**1. Enable Native Daemon Access**
+Ensure the Docker daemon is actively running and automatically initialized upon boot:
+```bash
+sudo systemctl enable --now docker
+```
+
+**2. Configure Socket Permissions**
+To allow Testcontainers to securely provision ephemeral endpoints natively without `sudo`, you must apply the correct permissions to the Docker socket:
+```bash
+# Temporarily grant execution context optimally
+sudo chmod 666 /var/run/docker.sock
+
+# Or permanently map the user correctly (requires a reboot or logout)
+sudo usermod -aG docker $USER
+```
+
+**3. Execute the Integration Test**
+Once permissions are explicitly granted seamlessly, execute the tests natively safely:
+```bash
+cd ManagedSecurity.Test
+dotnet test --filter "TestCategory=Integration"
+```
+**4. Execute a Manual "Phisical" Integration Test**
+`dotnet run --project ManagedSecurity.Sentinel -- onvif-diag [IP_ADDRESS]`
+E.g:
+```bash
+dotnet run --project ManagedSecurity.Sentinel -- onvif-diag 192.168.8
+```
+
+
+
 ## 📝 License (Multi-License Structure)
 
 The `ManagedSecurity` repository uses a **split per-project licensing model** to completely quarantine the viral nature of the GPL-3.0 machine vision integrations from the permissive core cryptography libraries.
@@ -262,6 +296,8 @@ g++ -shared -fPIC -O3 \
 ```
 
 ### Advanced Dynamic Loader Strategy (Linux)
+**Build Automation Sync:** Once compiled via `g++`, MSBuild natively consumes the object via `<None Include="..\sentinel_yolo26_core.so">` and explicitly synchronizes it alongside `libonnxruntime.so.1.17.1` dynamically directly into the `bin/` execution directories on every `dotnet build`. 
+
 The underlying cross-platform YOLO inference module (`sentinel_yolo26_core.so`) is dynamically linked against ONNX Runtime (`libonnxruntime.so.1.17.1`). During execution, `.NET`'s `NativeLibrary.TryLoad` intercepts the load sequence by loading the ONNX Runtime library explicitly via `AppContext.BaseDirectory` *before* loading the primary interop library. Coupled with the `-Wl,-rpath,'$ORIGIN'` build flag, the Linux dynamic linker (`ld.so`) can seamlessly locate chained dependencies inside the local binary folder. This completely eliminates the need for any wrapper scripts modifying `LD_LIBRARY_PATH`, ensuring secure NativeAOT CPU execution loads out-of-the-box perfectly.
 
 ## 🏃‍♂️ Running the Sentinel System

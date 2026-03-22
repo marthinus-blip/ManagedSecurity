@@ -33,4 +33,15 @@ public class OrchestrationConfig
     /// The base URL of the central Commander node that Scouts report to (e.g. http://192.168.1.100:5188)
     /// </summary>
     public string CommanderBaseUrl { get; set; } = "http://localhost:5188";
+
+    /// <summary>
+    /// File path where encrypted vault data is persisted.
+    /// </summary>
+    public string VaultLocation { get; set; } = "Vault";
+
+    /// <summary>
+    /// Prevents the engine from emitting hallucinatory bounding box data if the Native DLL fails to bind. 
+    /// Must be explicitly true for diagnostic routines. Default is FALSE to ensure Absolute Ground Truth natively.
+    /// </summary>
+    public bool AllowSimulationFallback { get; set; } = false;
 }

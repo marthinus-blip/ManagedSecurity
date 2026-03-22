@@ -11,6 +11,7 @@ namespace ManagedSecurity.Core;
 [ManagedSecurity.Common.Attributes.AllowMagicValues]
 public sealed class ShieldSession : IDisposable
 {
+    private static readonly Microsoft.Extensions.Logging.ILogger _logger = ManagedSecurity.Common.Logging.SentinelLogger.CreateLogger<ShieldSession>();
     private static ReadOnlySpan<byte> HandshakeMagic => "SHLD"u8;
     private const byte HandshakeVersion = 1;
 
@@ -67,7 +68,7 @@ public sealed class ShieldSession : IDisposable
 
         // 4. Use HKDF-SHA256 to derive a 256-bit session key
         byte[] key = HKDF.DeriveKey(HashAlgorithmName.SHA256, sharedSecret, 32, info: "ManagedSecurity_Session_V1"u8.ToArray());
-        Console.WriteLine($"[DEBUG] Session Key Hash: {BitConverter.ToString(key, 0, 4)}");
+        ManagedSecurity.Common.Logging.SentinelLogger.Debug(_logger, $"[DEBUG] Session Key Hash: {BitConverter.ToString(key, 0, 4)}");
         return key;
     }
 

@@ -14,7 +14,7 @@ This project, `ManagedSecurity`, is the cryptographic backbone of that system.
 - **Language/Stack**: .NET 8, C# 12, NativeAOT (Strict compliance).
 - **Design Philosophy**: 
     - **Zero-Allocation**: Use `Span<T>` and `Memory<T>` everywhere.
-    - **Custom Binary Protocols**: Prefer bit-packed headers ("Perfect 32") over JSON/Protobuf for speed.
+    - **MemoryPack IPC**: Prefer `MemoryPack` source generators over manual byte-arrays or JSON/Protobuf for high-speed, structural zero-allocation binary C2 protocols.
     - **Cross-Platform**: Force Big-Endian for network/storage consistency.
     - **Media-Awareness**: Align encryption boundaries with media boundaries (H.264 I-Frames/NAL units). Implement **Seek Tables** in unencrypted metadata to enable high-speed recovery and jumping.
 - **Dashboard Architecture**: **WASM-First/E2EE**. The Hub acts as a blind relay; decryption happens in the browser via WebAssembly to ensure absolute privacy for camera feeds.

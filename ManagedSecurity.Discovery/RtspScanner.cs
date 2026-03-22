@@ -10,6 +10,7 @@ namespace ManagedSecurity.Discovery;
 [ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class RtspScanner
 {
+    private static readonly Microsoft.Extensions.Logging.ILogger _logger = ManagedSecurity.Common.Logging.SentinelLogger.CreateLogger<RtspScanner>();
     private readonly int _timeoutMs;
 
     public RtspScanner(int timeoutMs = 1500)
@@ -48,7 +49,7 @@ public class RtspScanner
                 var result = await ProbeRtspPortAsync(ip, port);
                 if (result != null)
                 {
-                    Console.WriteLine($"[DISCOVERY] Found RTSP camera at {ip}:{port}{result.Path}");
+                    ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[DISCOVERY] Found RTSP camera at {ip}:{port}{result.Path}");
                     results.Add(result);
                     break; // Port found, move to next host
                 }

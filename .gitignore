@@ -505,3 +505,8 @@ ManagedSecurity.Sentinel/obj/
 # Python environments
 my_ultralytics/
 myenv/
+
+# Diagnostic Vaults
+*.smvs
+**/Vault/
+pedestrian.avi

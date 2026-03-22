@@ -10,6 +10,7 @@ namespace ManagedSecurity.Orchestration;
 [ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class CameraStore
 {
+    private static readonly Microsoft.Extensions.Logging.ILogger _logger = ManagedSecurity.Common.Logging.SentinelLogger.CreateLogger<CameraStore>();
     private readonly string _path;
     private JsonSerializerOptions _options = new() { WriteIndented = true };
 
@@ -31,7 +32,7 @@ public class CameraStore
         var context = new CameraStoreJsonContext(_options);
         string json = JsonSerializer.Serialize(cameras, context.ListDiscoveryResult);
         await File.WriteAllTextAsync(_path, json);
-        Console.WriteLine($"[STORE] Saved {cameras.Count} cameras to {_path}. Confirmation: {File.Exists(_path)}");
+        ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[STORE] Saved {cameras.Count} cameras to {_path}. Confirmation: {File.Exists(_path)}");
     }
 
     public async Task<List<DiscoveryResult>> LoadAsync()

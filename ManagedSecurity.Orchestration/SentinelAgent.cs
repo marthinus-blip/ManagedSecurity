@@ -23,6 +23,7 @@ public interface IAgentBehavior
 [ManagedSecurity.Common.Attributes.AllowMagicValues]
 public class SentinelAgent
 {
+    private static readonly Microsoft.Extensions.Logging.ILogger _logger = ManagedSecurity.Common.Logging.SentinelLogger.CreateLogger<SentinelAgent>();
     public string Id { get; } = Guid.NewGuid().ToString("N").Substring(0, 8);
     private readonly ConcurrentDictionary<string, IAgentBehavior> _behaviors = new();
     private readonly CancellationTokenSource _cts = new();
@@ -33,7 +34,7 @@ public class SentinelAgent
     {
         if (_behaviors.TryAdd(behavior.Name, behavior))
         {
-            Console.WriteLine($"[AGENT:{Id}] Activating behavior: {behavior.Name}");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[AGENT:{Id}] Activating behavior: {behavior.Name}");
             // Start the behavior in the background
             _ = behavior.StartAsync(_cts.Token);
         }
@@ -44,7 +45,7 @@ public class SentinelAgent
     {
         if (_behaviors.TryRemove(name, out var behavior))
         {
-            Console.WriteLine($"[AGENT:{Id}] Deactivating behavior: {name}");
+            ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[AGENT:{Id}] Deactivating behavior: {name}");
             await behavior.StopAsync();
         }
     }

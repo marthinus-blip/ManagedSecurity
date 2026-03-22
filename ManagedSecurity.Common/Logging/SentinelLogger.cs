@@ -47,6 +47,21 @@ public static partial class SentinelLogger
         Level = LogLevel.Error,
         Message = "[NO SIGNAL] {component} Failure: {error}")]
     public static partial void NoSignal(ILogger logger, string component, string error);
+
+    [LoggerMessage(EventId = 200, Level = LogLevel.Information, Message = "[INFO] {message}")]
+    public static partial void Info(ILogger logger, string message);
+
+    [LoggerMessage(EventId = 201, Level = LogLevel.Debug, Message = "[DEBUG] {message}")]
+    public static partial void Debug(ILogger logger, string message);
+
+    [LoggerMessage(EventId = 202, Level = LogLevel.Warning, Message = "[WARN] {message}")]
+    public static partial void Warning(ILogger logger, string message);
+
+    [LoggerMessage(EventId = 203, Level = LogLevel.Error, Message = "[ERROR] {message}")]
+    public static partial void Error(ILogger logger, Exception? exception, string message);
+
+    [LoggerMessage(EventId = 204, Level = LogLevel.Error, Message = "[ERROR] {message}")]
+    public static partial void ErrorPlain(ILogger logger, string message);
     
     public static ILogger CreateLogger<T>() => _factory?.CreateLogger<T>() ?? _defaultLogger!;
     public static ILogger CreateLogger(string category) => _factory?.CreateLogger(category) ?? _defaultLogger!;

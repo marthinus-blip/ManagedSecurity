@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  rtsp-server:
+    image: bluenviron/mediamtx:latest
+    ports:
+      - "8554:8554"
+    networks:
+      - sim-net
+      
+  positive-stream:
+    image: linuxserver/ffmpeg:latest
+    volumes:
+      - ../sample_video.mp4:/positive.mp4:ro
+    command: -re -stream_loop -1 -i /positive.mp4 -c:v copy -f rtsp rtsp://rtsp-server:8554/positive
+    depends_on:
+      - rtsp-server
+    networks:
+      - sim-net
+
+  negative-stream:
+    image: linuxserver/ffmpeg:latest
+    # Generating a solid black 640x640 silent native h264 loop in RAM for negative truth testing
+    command: -re -f lavfi -i color=c=black:s=640x640:r=15 -c:v libx264 -preset ultrafast -b:v 500k -f rtsp rtsp://rtsp-server:8554/negative
+    depends_on:
+      - rtsp-server
+    networks:
+      - sim-net
+
+networks:
+  sim-net:
+    driver: bridge

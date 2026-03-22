@@ -26,7 +26,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="..\sentinel_yolo26_core.so">
+    <None Include="..\sentinel_yolo26_core.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\libonnxruntime.so.1.17.1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\models\**\*">

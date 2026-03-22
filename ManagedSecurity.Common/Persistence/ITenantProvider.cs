@@ -21,4 +21,9 @@ public interface ITenantProvider
     /// Generates the Contextual Role relationship (The Persona) inside the Database junction table.
     /// </summary>
     Task GrantTenantAccessAsync(TenantUserAccessRecord record, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Evaluates the Many-to-Many junction unpacking physical capability structures natively dynamically.
+    /// </summary>
+    Task<IReadOnlyList<string>> GetUserCapabilitiesForTenantAsync(long userId, long tenantId, CancellationToken cancellationToken = default);
 }

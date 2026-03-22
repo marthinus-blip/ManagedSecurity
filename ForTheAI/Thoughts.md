@@ -474,3 +474,9 @@ Resynced system lexicon by fixing 'Black Feed' on thumbnails.
 > Core Architectural Decisions:
 > 1. **Zero Browser Interfacing:** The priority is locking the Arbitrator feature completely. Visual DOM creation (React/Vite) is expressly blocked until the Arbitrator tunnels are 100% verified.
 > 2. **REST Validation Matrix:** All validations for Edge Node connections, Token provisioning, and P2P payload dispatch will be executed strictly via `curl` / `Postman`. The `SentinelDashboard.Api` must support the necessary endpoints to facilitate this validation mathematically identically smoothly `[FF-OPT]`.
+
+## [thought_com_proj_headless_datalayer_integration]((2026-03-22T14:38:00) (Why: Formalize relational physical mapping constraints via Headless REST wrappers prior to DOM bindings.))
+> Core Architectural Decisions:
+> 1. **Native Dialect Extraction:** `SentinelDashboard.Api` natively evaluates `appsettings.json` configuring either `SqliteDialectTranslator` or `PostgresDialectTranslator` natively into the ASP.NET dependency grid. The Commercial Hub leverages `ManagedSecurity.Common` `SentinelDbTenantProvider` natively without reinventing `DbCommand` bindings natively.
+> 2. **Explicit Headless REST Wrappers:** We execute `POST /api/tenant`, `POST /api/auth/login`, and `POST /api/node/provision` specifically to abstract the `ITenantProvider` and `IUserProvider` structurally effectively bypassing GUI evaluations solidly `[INSC-OPT]`.
+> 3. **Argon2id Vault Boundary:** Physical database layers must map securely using `Argon2idPasswordHasher` avoiding plain-text cryptographic faults explicitly `[ESC-OPT]`.

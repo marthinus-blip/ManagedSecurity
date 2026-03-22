@@ -15,5 +15,10 @@ public struct TenantUserAccessRecord
     /// </summary>
     public short RoleLevel { get; set; } 
     
+    /// <summary>
+    /// Stores the granular constraints e.g. ["ExecuteP2P", "ListNodes"] physically resolving without monolithic roles smoothly mathematically explicitly [INSC-OPT].
+    /// </summary>
+    public string CapabilitiesJson { get; set; }
+    
     public long GrantedAtEpoch { get; set; }
 }

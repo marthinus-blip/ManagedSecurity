@@ -510,3 +510,8 @@ myenv/
 *.smvs
 **/Vault/
 pedestrian.avi
+agent_*.log
+test_output*.log
+net_vault/
+vault_data/
+video_vault/

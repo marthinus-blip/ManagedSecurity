@@ -1561,8 +1561,16 @@ class Program
         if (args.Length > 1 && args[1] == "positive")
         {
             Console.WriteLine("[DIAGNOSTIC] Overriding natively to local POSITIVE boundary stream entirely without docker.");
+            string localFile = System.IO.Path.GetFullPath("pedestrian.avi");
+            if (!System.IO.File.Exists(localFile))
+            {
+                Console.WriteLine($"[DIAGNOSTIC] The physical validation payload '{localFile}' is completely missing.");
+                Console.WriteLine("[DIAGNOSTIC] Please execute the following command at the repository root to fetch a valid ONNX testing sample:");
+                Console.WriteLine("wget https://github.com/intel-iot-devkit/sample-videos/raw/master/person-bicycle-car-detection.mp4 -O pedestrian.avi");
+                return 1;
+            }
             targetCam = new ManagedSecurity.Discovery.DiscoveryResult("127.0.0.1", 8555, "/positive") { RequiresAuth = false };
-            targetCam.Url = "file:///home/me/Repos/Dotnet/ManagedSecurity/pedestrian.avi";
+            targetCam.Url = $"file://{localFile}";
             targetCam.MvRoute = ManagedSecurity.Discovery.MachineVisionRoute.HeavyPlain;
         }
         else if (args.Length > 1 && args[1] == "negative")

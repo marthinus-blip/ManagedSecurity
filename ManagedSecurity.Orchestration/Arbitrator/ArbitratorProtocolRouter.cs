@@ -118,7 +118,7 @@ public class ArbitratorProtocolRouter : IArbitratorProtocolRouter
     private int SerializeFrameSynchronously(Span<byte> destination, ushort opCode, uint correlationId, ReadOnlySpan<byte> payload)
     {
         // Frame version is intrinsically v1
-        var frame = new ArbitratorFrame(1, opCode, correlationId, payload);
+        var frame = new ArbitratorFrame(1, opCode, correlationId, 0, payload);
         return frame.WriteTo(destination);
     }
 

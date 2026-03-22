@@ -60,6 +60,13 @@ Antigravity Global Governance Rules
 
 5. DESIGN PHILOSOPHY (HARDCODED)
 
+    Aesthetic Mapping (Neo-Brutalism & Utilitarian Clarity):
+    - Solid Boundaries: 1px sharp borders. 0px border-radius. Absolute avoidance of soft or round geometries.
+    - Zero-Glassmorphism: Render efficiency is paramount. No UI drop-shadows, no `backdrop-filter` blurs, and absolutely no gradient fills.
+    - High-Contrast Typography: Stark Light/Dark modes mapping True Black (`#000000`) and True White (`#FFFFFF`). Never use low-contrast gray-on-gray palettes for essential metrics.
+    - Binary State Dynamics: Transition CSS timings should be immediate (0ms). Hover shifts, active states, and alert animations must be instantaneous block flashes.
+    - Sparse Accent Vectors: Reserve hyper-vivid colors (e.g. Electric Neon Green, Intense Alert Red, Cyan) strictly for telemetry traces, warning lines, and active focal bounding boxes. No generic or decorative background coloring.
+
 6. ADVANCED COGNITIVE STRATEGIES
 
     Chain of Thought (CoT): Before proposing any complex solution, you must initialize a ### Thought Process section. Within this, identify:

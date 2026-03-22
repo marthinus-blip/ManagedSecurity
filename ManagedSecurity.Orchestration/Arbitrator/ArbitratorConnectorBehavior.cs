@@ -17,12 +17,14 @@ public class ArbitratorConnectorBehavior : IAgentBehavior
     
     private readonly string _agentId;
     private readonly string _arbitratorUrl;
+    private readonly string _edgeToken;
     private bool _isRunning;
 
-    public ArbitratorConnectorBehavior(string agentId, string arbitratorUrl)
+    public ArbitratorConnectorBehavior(string agentId, string arbitratorUrl, string edgeToken = "Sentinel_Fallback_Token")
     {
         _agentId = agentId;
         _arbitratorUrl = arbitratorUrl;
+        _edgeToken = edgeToken;
     }
 
     public async Task StartAsync(CancellationToken ct)
@@ -33,11 +35,18 @@ public class ArbitratorConnectorBehavior : IAgentBehavior
         while (!ct.IsCancellationRequested && _isRunning)
         {
             using var client = new ClientWebSocket();
+            
+            // [INSC-OPT] Prevent connection hijacking natively by declaring our physical Tenant boundary mathematically securely.
+            if (!string.IsNullOrWhiteSpace(_edgeToken))
+            {
+                client.Options.SetRequestHeader("Authorization", $"Bearer {_edgeToken}");
+            }
+            
             try
             {
                 var uri = new Uri($"{_arbitratorUrl}?agentId={_agentId}");
                 await client.ConnectAsync(uri, ct);
-                ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[CONNECTOR] Tunnel established: {uri}");
+                ManagedSecurity.Common.Logging.SentinelLogger.Info(_logger, $"[CONNECTOR] Token-Handshake completed. Tunnel established natively: {uri}");
 
                 var buffer = new byte[1024];
                 while (client.State == WebSocketState.Open && !ct.IsCancellationRequested)

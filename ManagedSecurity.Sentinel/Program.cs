@@ -1600,11 +1600,12 @@ class Program
                 try
                 {
                     string confPath = "managed_cameras.json";
-                    var existing = System.IO.File.Exists(confPath) ? System.Text.Json.JsonSerializer.Deserialize<List<ManagedSecurity.Discovery.DiscoveryResult>>(System.IO.File.ReadAllText(confPath)) ?? new() : new();
+                    var existing = System.IO.File.Exists(confPath) ? System.Text.Json.JsonSerializer.Deserialize(System.IO.File.ReadAllText(confPath), SentinelJsonContext.Default.ListDiscoveryResult) ?? new() : new();
                     if (!existing.Any(c => c.Id == targetCam.Id))
                     {
                         existing.Add(targetCam);
-                        System.IO.File.WriteAllText(confPath, System.Text.Json.JsonSerializer.Serialize(existing, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+                        var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+                        System.IO.File.WriteAllText(confPath, System.Text.Json.JsonSerializer.Serialize(existing, new SentinelJsonContext(options).ListDiscoveryResult));
                         Console.WriteLine($"[DIAGNOSTIC] Configuration updated: '{confPath}' appended securely.");
                     }
                 }
